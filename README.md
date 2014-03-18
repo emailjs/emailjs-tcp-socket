@@ -38,10 +38,19 @@ The following API is not available with this shim:
 * #suspend
 * #upgradeToSecure
 
-# Install
+## Installation
 
-    // hot and fresh from the master
-    npm install --save https://github.com/whiteout-io/tcp-socket/tarball/0.1.0
+### [volo](http://volojs.org/):
+
+    volo add whiteout-io/tcp-socket/v0.1.1
+
+### [Bower](http://bower.io/):
+
+    bower install git@github.com:whiteout-io/tcp-socket.git#0.1.1
+
+### [npm](https://www.npmjs.org/):
+
+    npm --save https://github.com/whiteout-io/tcp-socket/tarball/0.1.1
 
 # License
 

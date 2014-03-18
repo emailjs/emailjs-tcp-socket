@@ -194,7 +194,7 @@
     TCPSocket.prototype.send = function(data) {
         if (this.ssl) {
             data = this._isBinary ? a2s(data) : data; // forge needs string
-            this.self._tlsClient.prepare(data); // give data to forge to be prepared for tls
+            this._tlsClient.prepare(data); // give data to forge to be prepared for tls
             return;
         }
 
