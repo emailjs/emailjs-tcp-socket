@@ -1,6 +1,6 @@
 This shim brings [Mozilla-flavored](https://developer.mozilla.org/en-US/docs/WebAPI/TCP_Socket) version of the [Raw Socket API](http://www.w3.org/TR/raw-sockets/) to Chromium. Its purpose is to enable apps to use the same codebase in Firefox OS, Chrome OS, and Chrome Packaged Apps...
 
-Feel free to you require() or include in your [Chrome Packaged App](http://developer.chrome.com/extensions/apps)!
+Feel free to you include in your [Chrome Packaged App](http://developer.chrome.com/extensions/apps)!
 
 # Usage
 
@@ -11,7 +11,10 @@ An example can be found in ```example/```:
     3) launch the extension
     4) have fun with navigator.TCPSocket
 
-If you are in a require.js environment, you can just ```require()``` the shim, and it will attach itself to the navigator object. Otherwise, just include ```TCPSocket.js``` in your markup.
+Include ```TCPSocket.js``` and ```forge``` in your markup. It will attach itself to the navigator object.
+    
+    <script src="forge.min.js"></script>
+    <script src="TCPSocket.js"></script>
 
     // creates a TCP socket
     var tcp = navigator.TCPSocket.open('127.0.0.1', 8000);

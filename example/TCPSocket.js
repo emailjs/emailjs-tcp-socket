@@ -18,21 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-(function(shim) {
-    'use strict';
-    if (typeof define === 'function' && define.amd) {
-        // chromium with requirejs
-        define(['forge'], shim);
-    } else {
-        // chromium without requirejs
-        shim(forge);
-    }
-})(function(forge) {
+(function(parent, forge) {
     'use strict';
 
-    navigator.TCPSocket = navigator.TCPSocket || navigator.mozTCPSocket;
+    parent.TCPSocket = parent.TCPSocket || parent.mozTCPSocket;
 
-    if (navigator.TCPSocket && typeof navigator.TCPSocket === "object") {
+    if (parent.TCPSocket && typeof parent.TCPSocket === "object") {
         // TCPSocket is already defined
         return;
     }
@@ -279,5 +270,5 @@
         return view.buffer;
     }
 
-    navigator.TCPSocket = TCPSocket;
-});
+    parent.TCPSocket = TCPSocket;
+})(navigator, forge);

@@ -1,16 +1,6 @@
-'use strict';
-require.config({
-    paths: {
-        'forge': 'forge.min',
-    },
-    shim: {
-        forge: {
-            exports: 'forge'
-        }
-    }
-});
-
-require(['TCPSocket'], function() {
+(function() {
+    'use strict';
+    
     var tcpBytes = 0;
     var t0 = new Date().getTime();
 
@@ -47,4 +37,4 @@ require(['TCPSocket'], function() {
         console.log('> tls socket received ' + tlsBytes + ' bytes in ' + (new Date().getTime() - t0) + ' ms');
         console.log('> tls socket state: ' + tls.readyState);
     };
-});
+})();
