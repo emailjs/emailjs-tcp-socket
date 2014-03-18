@@ -11,10 +11,10 @@ An example can be found in ```example/```:
     3) launch the extension
     4) have fun with navigator.TCPSocket
 
-Include ```TCPSocket.js``` and ```forge``` in your markup. It will attach itself to the navigator object.
+Include ```tcp-socket.js``` and ```forge``` in your markup. It will attach itself to the navigator object.
     
     <script src="forge.min.js"></script>
-    <script src="TCPSocket.js"></script>
+    <script src="tcp-socket.js"></script>
 
     // creates a TCP socket
     var tcp = navigator.TCPSocket.open('127.0.0.1', 8000);
@@ -41,8 +41,7 @@ The following API is not available with this shim:
 # Install
 
     // hot and fresh from the master
-    npm install --save https://github.com/whiteout-io/tcp-socket/tarball/master
-    cp node_modules/tcp-socket/src/TCPSocket.js scripts/
+    npm install --save https://github.com/whiteout-io/tcp-socket/tarball/0.1.0
 
 # License
 

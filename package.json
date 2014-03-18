@@ -1,7 +1,7 @@
 {
   "name": "tcp-socket",
   "version": "0.1.0",
-  "main": "src/TCPSocket",
+  "main": "src/tcp-socket",
   "description": "This shim brings [Mozilla-flavored](https://developer.mozilla.org/en-US/docs/WebAPI/TCP_Socket) version of the [Raw Socket API](http://www.w3.org/TR/raw-sockets/) to Chromium. It's purpose is to enable apps to use the same codebase in Firefox OS, Chrome OS, and Chrome Packaged Apps...",
   "repository": {
     "type": "git",
