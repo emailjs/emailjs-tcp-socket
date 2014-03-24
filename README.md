@@ -46,17 +46,15 @@ The following API is not available with this shim:
 
 ### [Bower](http://bower.io/):
 
-    bower install git@github.com:whiteout-io/tcp-socket.git#0.1.1
+    bower install git@github.com:whiteout-io/tcp-socket.git#v0.1.1
 
 ### [npm](https://www.npmjs.org/):
 
-    npm --save https://github.com/whiteout-io/tcp-socket/tarball/0.1.1
+    npm --save https://github.com/whiteout-io/tcp-socket/tarball/v0.1.1
 
 # License
 
 This library is licensed under the MIT license.
-
-    The MIT License (MIT)
 
     Copyright (c) 2014 Whiteout Networks
 
