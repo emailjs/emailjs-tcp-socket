@@ -13,9 +13,24 @@
     "email": "felix@whiteout.io"
   }],
   "license": "MIT",
+  "scripts": {
+    "test": "grunt"
+  },
   "bugs": {
     "url": "https://github.com/whiteout-io/tcp-socket/issues"
   },
   "homepage": "https://github.com/whiteout-io/tcp-socket",
+  "dependencies": {
+    "node-forge": "^0.2.33"
+  },
+  "devDependencies": {
+    "amdefine": "~0.1.0",
+    "grunt": "~0.4.1",
+    "grunt-contrib-jshint": "~0.8.0",
+    "grunt-contrib-copy": "~0.4.1",
+    "grunt-mocha-test": "~0.6.2",
+    "chai": "~1.7.2",
+    "sinon": "1.7.3"
+  },
   "volo": {}
 }
