@@ -2,7 +2,7 @@
   "name": "tcp-socket",
   "version": "0.2.0",
   "main": "src/tcp-socket",
-  "description": "This shim brings [Mozilla-flavored](https://developer.mozilla.org/en-US/docs/WebAPI/TCP_Socket) version of the [Raw Socket API](http://www.w3.org/TR/raw-sockets/) to Chromium. It's purpose is to enable apps to use the same codebase in Firefox OS, Chrome OS, and Chrome Packaged Apps...",
+  "description": "This shim brings the W3C Raw Socket API to node.js and Chromium. Its purpose is to enable apps to use the same api in Firefox OS, Chrome OS, and on the server.",
   "repository": {
     "type": "git",
     "url": "git://github.com/whiteout-io/tcp-socket.git"
