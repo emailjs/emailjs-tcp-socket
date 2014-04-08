@@ -149,7 +149,7 @@
 
             if (self.ssl) {
                 if (!config.options.ca) {
-                    throw 'No pinned certificate present, TLS verification is broken!';
+                    throw new Error('No pinned certificate present, TLS verification is broken!');
                 }
 
                 self._ca = forge.pki.certificateFromPem(config.options.ca);
@@ -162,7 +162,7 @@
                         }
 
                         // no pinning...
-                        throw 'No pinned certificate present, TLS verification is broken!';
+                        throw new Error('No pinned certificate present, TLS verification is broken!');
                     },
                     connected: function(connection) {
                         if (!connection) {
@@ -304,7 +304,7 @@
 
 
     TCPSocket.listen = TCPSocket.prototype.resume = TCPSocket.prototype.suspend = TCPSocket.prototype.upgradeToSecure = function() {
-        throw 'API not supported';
+        throw new Error('API not supported');
     };
 
     // Internal use
