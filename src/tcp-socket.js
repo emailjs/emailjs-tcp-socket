@@ -342,7 +342,12 @@
 
     // array buffer -> singlebyte string
     function a2s(buf) {
-        return String.fromCharCode.apply(null, new Uint8Array(buf));
+        var view = new Uint8Array(buf),
+            str = '';
+        for (var i = 0, j = view.length; i < j; i++) {
+            str += String.fromCharCode(view[i]);
+        }
+        return str;
     }
 
     // singlebyte string -> array buffer
