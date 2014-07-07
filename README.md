@@ -47,15 +47,15 @@ The following API is not available with this shim:
 
 ### [volo](http://volojs.org/):
 
-    volo add whiteout-io/tcp-socket/v0.1.1
+    volo add whiteout-io/tcp-socket/v0.2.1
 
 ### [Bower](http://bower.io/):
 
-    bower install git@github.com:whiteout-io/tcp-socket.git#v0.1.1
+    bower install git@github.com:whiteout-io/tcp-socket.git#v0.2.1
 
 ### [npm](https://www.npmjs.org/):
 
-    npm --save https://github.com/whiteout-io/tcp-socket/tarball/v0.1.1
+    npm install tcp-socket
 
 # License
 
