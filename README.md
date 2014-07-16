@@ -27,10 +27,21 @@ Include ```tcp-socket.js``` and ```forge``` in your markup. It will attach itsel
     // creates a TLS socket
     var tls = navigator.TCPSocket.open('127.0.0.1', 9000, {
         useSSL: true,
-        ca: 'insert PEM-formatted cert here'
+        ca: 'insert PEM-formatted cert here' // certificate pinning
     });
 
-**A note on TLS**: [Native TLS is not yet available for chrome.socket.](https://code.google.com/p/chromium/issues/detail?id=132896). For this reason, we cannot tap into the browser's native SSL certificates. If you want to use TLS, you must provide a certificate for pinning! This shim depends on [forge](https://github.com/digitalbazaar/forge) for TLS. Please consult the [forge project page](https://github.com/digitalbazaar/forge) for examples how to make forge available in your application and/or have a look at the eample in this repository.
+**A note on TLS**: [Native TLS is not yet available for chrome.socket.](https://code.google.com/p/chromium/issues/detail?id=132896). For this reason, we cannot tap into the browser's native SSL certificates. If you want to use TLS, you must provide a certificate for pinning! This shim depends on [forge](https://github.com/digitalbazaar/forge) for TLS. Please consult the [forge project page](https://github.com/digitalbazaar/forge) for examples how to make forge available in your application and/or have a look at the example in this repository.
+
+You can either supply the socket with a certificate, or use a trust-on-first-use based approach, where the socket is accepted in the first try and you will receive a callback with the certificate. Use this certificate in subsequent interactions with this host. Host authenticity is evaluated based on their Common Name (or SubjectAltNames) and the certificate's public key fingerprint.
+
+    var tls = navigator.TCPSocket.open('127.0.0.1', 9000, {
+        useSSL: true
+    });
+
+    tls.oncert = function(pemEncodedCertificate) {
+        // do something useful with the certificate, e.g.
+        // store it and reuse it on a trust-on-first-use basis
+    };
 
 For everything else, see the [Mozilla TCPSocket API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/TCPSocket).
 
@@ -45,17 +56,12 @@ The following API is not available with this shim:
 
 ## Installation
 
-### [volo](http://volojs.org/):
-
-    volo add whiteout-io/tcp-socket/v0.2.1
-
-### [Bower](http://bower.io/):
-
-    bower install git@github.com:whiteout-io/tcp-socket.git#v0.2.1
-
 ### [npm](https://www.npmjs.org/):
 
-    npm install tcp-socket
+    npm install --save tcp-socket
+
+    or directly from github
+    npm install --save https://github.com/whiteout-io/tcp-socket/tarball/<TAG_NAME>
 
 # License
 
