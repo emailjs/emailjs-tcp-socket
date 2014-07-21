@@ -67,13 +67,13 @@
             var self = this,
                 netApi;
 
-            config.options.useSSL = (typeof config.options.useSSL !== 'undefined') ? config.options.useSSL : false;
+            config.options.useSecureTransport = (typeof config.options.useSecureTransport !== 'undefined') ? config.options.useSecureTransport : false;
             config.options.binaryType = config.options.binaryType || 'arraybuffer';
 
             // public flags
             self.host = config.host;
             self.port = config.port;
-            self.ssl = config.options.useSSL;
+            self.ssl = config.options.useSecureTransport;
             self.bufferedAmount = 0;
             self.readyState = 'connecting';
             self.binaryType = config.options.binaryType;
@@ -128,13 +128,13 @@
         TCPSocket = function(config) {
             var self = this;
 
-            config.options.useSSL = (typeof config.options.useSSL !== 'undefined') ? config.options.useSSL : false;
+            config.options.useSecureTransport = (typeof config.options.useSecureTransport !== 'undefined') ? config.options.useSecureTransport : false;
             config.options.binaryType = config.options.binaryType || 'arraybuffer';
 
             // public flags
             self.host = config.host;
             self.port = config.port;
-            self.ssl = config.options.useSSL;
+            self.ssl = config.options.useSecureTransport;
             self.bufferedAmount = 0;
             self.readyState = 'connecting';
             self.binaryType = config.options.binaryType;
@@ -148,21 +148,48 @@
             self._socketId = 0;
 
             if (self.ssl) {
-                if (!config.options.ca) {
-                    throw new Error('No pinned certificate present, TLS verification is broken!');
+                if (config.options.ca) {
+                    self._ca = forge.pki.certificateFromPem(config.options.ca);
                 }
 
-                self._ca = forge.pki.certificateFromPem(config.options.ca);
                 self._tlsClient = forge.tls.createConnection({
                     server: false,
                     verify: function(connection, verified, depth, certs) {
-                        if (self._ca) {
-                            // verify certificate through pinning
-                            return self._ca.verify(certs[0]);
+                        if (!(certs && certs[0])) {
+                            return false;
                         }
 
-                        // no pinning...
-                        throw new Error('No pinned certificate present, TLS verification is broken!');
+                        if (!verifyCertificate(certs[0], self.host)) {
+                            return false;
+                        }
+
+                        /*
+                         * Please see the readme for an explanation of the behavior without a native TLS stack!
+                         */
+                        if (self._ca) {
+                            // verify certificate through pinning
+                            var fpPinned = forge.pki.getPublicKeyFingerprint(self._ca.publicKey, {
+                                encoding: 'hex'
+                            });
+                            var fpRemote = forge.pki.getPublicKeyFingerprint(certs[0].publicKey, {
+                                encoding: 'hex'
+                            });
+
+                            // check if cert fingerprints match
+                            if (fpPinned === fpRemote) {
+                                return true;
+                            }
+
+                            // notify the upper layer of the new cert
+                            self.oncert(forge.pki.certificateToPem(certs[0]));
+                            // fail when fingerprint does not match
+                            return false;
+                        }
+
+                        // notify the upper layer of the new cert
+                        self.oncert(forge.pki.certificateToPem(certs[0]));
+                        // succeed only if self.oncert is implemented (otherwise forge catches the error)
+                        return true;
                     },
                     connected: function(connection) {
                         if (!connection) {
@@ -189,7 +216,6 @@
                         self.close();
                     }
                 });
-
             }
 
             // connect the socket
@@ -339,6 +365,44 @@
     //
     // Helper functions
     //
+
+    /**
+     * Verifies a host name by the Common Name or Subject Alternative Names
+     *
+     * @param {Object} cert A forge certificate object
+     * @param {String} host The host name, e.g. imap.gmail.com
+     * @return {Boolean} true, if host name matches certificate, otherwise false
+     */
+    function verifyCertificate(cert, host) {
+        var cn, cnRegex, subjectAltName, sanRegex;
+
+        cn = cert.subject.getField('CN');
+        if (cn && cn.value) {
+            cnRegex = new RegExp(cn.value.replace(/\./g, '\\.').replace(/\*/g, '.*'), 'i');
+            if (cnRegex.test(host)) {
+                return true;
+            }
+        }
+
+        subjectAltName = cert.getExtension({
+            name: 'subjectAltName'
+        });
+
+        if (!(subjectAltName && subjectAltName.altNames)) {
+            return false;
+        }
+
+        for (var i = subjectAltName.altNames.length - 1; i >= 0; i--) {
+            if (subjectAltName.altNames[i] && subjectAltName.altNames[i].value) {
+                sanRegex = new RegExp(subjectAltName.altNames[i].value.replace(/\./g, '\\.').replace(/\*/g, '.*'), 'i');
+                if (sanRegex.test(host)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     // array buffer -> singlebyte string
     function a2s(buf) {
