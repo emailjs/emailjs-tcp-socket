@@ -175,15 +175,20 @@
                                 encoding: 'hex'
                             });
 
+                            // check if cert fingerprints match
                             if (fpPinned === fpRemote) {
                                 return true;
                             }
 
+                            // notify the upper layer of the new cert
                             self.oncert(forge.pki.certificateToPem(certs[0]));
+                            // fail when fingerprint does not match
                             return false;
                         }
 
+                        // notify the upper layer of the new cert
                         self.oncert(forge.pki.certificateToPem(certs[0]));
+                        // succeed only if self.oncert is implemented (otherwise forge catches the error)
                         return true;
                     },
                     connected: function(connection) {
