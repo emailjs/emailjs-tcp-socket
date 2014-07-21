@@ -43,6 +43,14 @@ You can either supply the socket with a certificate, or use a trust-on-first-use
         // store it and reuse it on a trust-on-first-use basis
     };
 
+Here's how the TLS socket will behave when presented with a server certificate:
+
+* If the server does not present a certificate, it rejects the connection
+* If the server presents a certificate with wrong/missing CN and/or wrong/missing SANs, it rejects the connection
+* If no certificate was pinned, it calls .oncert() with the pem-encoded certificate and accepts the connection
+* If a certificate was pinned, but the server presents another certificate (according to the public key fingerprint), it calls .oncert() to inform you about changes, but rejects the connection
+* If a certificate was pinned and the server certificate's public key fingerprint matches the pinned certificate, the connection is accepted. .oncert will **not** be called in this case!
+
 For everything else, see the [Mozilla TCPSocket API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/TCPSocket).
 
 # Unavailable API

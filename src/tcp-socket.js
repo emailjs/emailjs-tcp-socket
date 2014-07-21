@@ -163,6 +163,9 @@
                             return false;
                         }
 
+                        /*
+                         * Please see the readme for an explanation of the behavior without a native TLS stack!
+                         */
                         if (self._ca) {
                             // verify certificate through pinning
                             var fpPinned = forge.pki.getPublicKeyFingerprint(self._ca.publicKey, {
