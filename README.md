@@ -26,7 +26,7 @@ Include ```tcp-socket.js``` and ```forge``` in your markup. It will attach itsel
 
     // creates a TLS socket
     var tls = navigator.TCPSocket.open('127.0.0.1', 9000, {
-        useSSL: true,
+        useSecureTransport: true,
         ca: 'insert PEM-formatted cert here' // certificate pinning
     });
 
@@ -35,7 +35,7 @@ Include ```tcp-socket.js``` and ```forge``` in your markup. It will attach itsel
 You can either supply the socket with a certificate, or use a trust-on-first-use based approach, where the socket is accepted in the first try and you will receive a callback with the certificate. Use this certificate in subsequent interactions with this host. Host authenticity is evaluated based on their Common Name (or SubjectAltNames) and the certificate's public key fingerprint.
 
     var tls = navigator.TCPSocket.open('127.0.0.1', 9000, {
-        useSSL: true
+        useSecureTransport: true
     });
 
     tls.oncert = function(pemEncodedCertificate) {

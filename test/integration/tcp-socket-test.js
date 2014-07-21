@@ -27,7 +27,7 @@ define(function(require) {
         beforeEach(function(done) {
             // build deps
             socket = TcpSocket.open('127.0.0.1', 6789, {
-                useSSL: false,
+                useSecureTransport: false,
             });
 
             expect(socket).to.exist;

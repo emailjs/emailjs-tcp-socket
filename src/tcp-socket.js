@@ -67,13 +67,13 @@
             var self = this,
                 netApi;
 
-            config.options.useSSL = (typeof config.options.useSSL !== 'undefined') ? config.options.useSSL : false;
+            config.options.useSecureTransport = (typeof config.options.useSecureTransport !== 'undefined') ? config.options.useSecureTransport : false;
             config.options.binaryType = config.options.binaryType || 'arraybuffer';
 
             // public flags
             self.host = config.host;
             self.port = config.port;
-            self.ssl = config.options.useSSL;
+            self.ssl = config.options.useSecureTransport;
             self.bufferedAmount = 0;
             self.readyState = 'connecting';
             self.binaryType = config.options.binaryType;
@@ -128,13 +128,13 @@
         TCPSocket = function(config) {
             var self = this;
 
-            config.options.useSSL = (typeof config.options.useSSL !== 'undefined') ? config.options.useSSL : false;
+            config.options.useSecureTransport = (typeof config.options.useSecureTransport !== 'undefined') ? config.options.useSecureTransport : false;
             config.options.binaryType = config.options.binaryType || 'arraybuffer';
 
             // public flags
             self.host = config.host;
             self.port = config.port;
-            self.ssl = config.options.useSSL;
+            self.ssl = config.options.useSecureTransport;
             self.bufferedAmount = 0;
             self.readyState = 'connecting';
             self.binaryType = config.options.binaryType;

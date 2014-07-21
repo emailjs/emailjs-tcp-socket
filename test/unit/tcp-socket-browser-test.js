@@ -40,7 +40,7 @@ define(function(require) {
                 });
 
                 socket = TcpSocket.open('127.0.0.1', 9000, {
-                    useSSL: false,
+                    useSecureTransport: false,
                 });
                 expect(socket).to.exist;
 
@@ -64,7 +64,7 @@ define(function(require) {
                     });
 
                     socket = TcpSocket.open('127.0.0.1', 9000, {
-                        useSSL: false,
+                        useSecureTransport: false,
                     });
                     expect(socket).to.exist;
 
