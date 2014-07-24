@@ -166,30 +166,44 @@
                         /*
                          * Please see the readme for an explanation of the behavior without a native TLS stack!
                          */
-                        if (self._ca) {
-                            // verify certificate through pinning
-                            var fpPinned = forge.pki.getPublicKeyFingerprint(self._ca.publicKey, {
-                                encoding: 'hex'
-                            });
-                            var fpRemote = forge.pki.getPublicKeyFingerprint(certs[0].publicKey, {
-                                encoding: 'hex'
-                            });
-
-                            // check if cert fingerprints match
-                            if (fpPinned === fpRemote) {
-                                return true;
-                            }
-
+                        
+                        // without a pinned certificate, we'll just accept the connection and notify the upper layer
+                        if (!self._ca) {
                             // notify the upper layer of the new cert
                             self.oncert(forge.pki.certificateToPem(certs[0]));
-                            // fail when fingerprint does not match
-                            return false;
+                            // succeed only if self.oncert is implemented (otherwise forge catches the error)
+                            return true;
+                        }
+
+                        // if we have a pinned certificate, things get a little more complicated:
+                        // - leaf certificates pin the host directly, e.g. for self-signed certificates
+                        // - we also allow intermediate certificates, for providers that are able to sign their own certs.
+
+                        // detect if this is a certificate used for signing by testing if the common name different from the hostname.
+                        // also, an intermediate cert has no SANs, at least none that match the hostname.
+                        if (!verifyCertificate(self._ca, self.host)) {
+                            // verify certificate through a valid certificate chain
+                            return self._ca.verify(certs[0]);
+                        }
+
+                        // verify certificate through host certificate pinning
+                        var fpPinned = forge.pki.getPublicKeyFingerprint(self._ca.publicKey, {
+                            encoding: 'hex'
+                        });
+                        var fpRemote = forge.pki.getPublicKeyFingerprint(certs[0].publicKey, {
+                            encoding: 'hex'
+                        });
+
+                        // check if cert fingerprints match
+                        if (fpPinned === fpRemote) {
+                            return true;
                         }
 
                         // notify the upper layer of the new cert
                         self.oncert(forge.pki.certificateToPem(certs[0]));
-                        // succeed only if self.oncert is implemented (otherwise forge catches the error)
-                        return true;
+                        // fail when fingerprint does not match
+                        return false;
+
                     },
                     connected: function(connection) {
                         if (!connection) {
