@@ -89,15 +89,30 @@
             netApi = (self.ssl) ? tls : net;
             self._socket = netApi.connect(self.port, self.host, self._emit.bind(self, 'open'));
 
+            // add all event listeners to the new socket
+            self._attachListeners();
+        };
+
+        TCPSocket.prototype._attachListeners = function() {
+            var self = this;
+
             self._socket.on('data', function(nodeBuf) {
                 // convert node buffer to array buffer or string
                 self._emit('data', toArrayBuffer(nodeBuf));
             });
-            self._socket.on('end', self._emit.bind(self, 'close'));
+
             self._socket.on('error', function(error) {
                 self._emit('error', error);
                 self.close();
             });
+
+            self._socket.on('end', self._emit.bind(self, 'close'));
+        };
+
+        TCPSocket.prototype._removeListeners = function() {
+            this._socket.removeAllListeners('data');
+            this._socket.removeAllListeners('end');
+            this._socket.removeAllListeners('error');
         };
 
         //
@@ -112,6 +127,27 @@
         TCPSocket.prototype.send = function(data) {
             // convert data to string or node buffer
             this._socket.write(toBuffer(data), this._emit.bind(this, 'drain'));
+        };
+
+        TCPSocket.prototype.upgradeToSecure = function() {
+            var self = this;
+
+            if (self.ssl) {
+                return;
+            }
+
+            // remove all event listeners from the old socket
+            self._removeListeners();
+
+            // replace the old socket with a shiny new tls socket
+            self._socket = tls.connect({
+                socket: self._socket
+            }, function() {
+                self.ssl = true;
+            });
+
+            // add all event listeners to the new socket
+            self._attachListeners();
         };
 
     } // end of nodeShim
@@ -137,6 +173,10 @@
 
             if (self.binaryType !== 'arraybuffer') {
                 throw new Error('Only arraybuffers are supported!');
+            }
+
+            if (config.options.ca) {
+                self._ca = forge.pki.certificateFromPem(config.options.ca);
             }
 
             // internal flags
@@ -233,6 +273,32 @@
                 this._socketId = 0;
             }
             this._emit('close');
+        };
+
+        TCPSocket.prototype.upgradeToSecure = function() {
+            var self = this;
+
+            if (self.ssl) {
+                return;
+            }
+
+            self.ssl = true;
+
+            if (chrome.socket.secure) {
+                chrome.socket.secure(self._socketId, {}, function(tlsResult) {
+                    if (tlsResult !== 0) {
+                        self._emit('error', new Error('TLS handshake failed'));
+                        self.close();
+                        return;
+                    }
+
+                    // let's start reading
+                    read.bind(self)();
+                });
+            } else {
+                self._tlsClient = createTlsClient.bind(self)();
+                self._tlsClient.handshake();
+            }
         };
 
         TCPSocket.prototype.send = function(data) {
@@ -389,9 +455,15 @@
         });
     };
 
-    TCPSocket.listen = TCPSocket.prototype.resume = TCPSocket.prototype.suspend = TCPSocket.prototype.upgradeToSecure = function() {
+    TCPSocket.listen = TCPSocket.listen || apiNotSupported;
+    TCPSocket.prototype.resume = TCPSocket.prototype.resume || apiNotSupported;
+    TCPSocket.prototype.suspend = TCPSocket.prototype.suspend || apiNotSupported;
+    TCPSocket.prototype.upgradeToSecure = TCPSocket.prototype.upgradeToSecure || apiNotSupported;
+
+
+    function apiNotSupported() {
         throw new Error('API not supported');
-    };
+    }
 
     // Internal use
 

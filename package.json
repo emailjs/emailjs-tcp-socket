@@ -1,6 +1,6 @@
 {
   "name": "tcp-socket",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "main": "src/tcp-socket",
   "description": "This shim brings the W3C Raw Socket API to node.js and Chromium. Its purpose is to enable apps to use the same api in Firefox OS, Chrome OS, and on the server.",
   "repository": {
@@ -27,10 +27,10 @@
     "node-forge": "^0.6.11"
   },
   "devDependencies": {
-    "amdefine": "~0.1.0",
     "chai": "~1.7.2",
     "express": "^4.8.6",
     "grunt": "~0.4.1",
+    "grunt-contrib-clean": "^0.6.0",
     "grunt-contrib-connect": "~0.6.0",
     "grunt-contrib-copy": "~0.4.1",
     "grunt-contrib-jshint": "~0.8.0",
@@ -40,6 +40,8 @@
     "mocha": "~1.16.2",
     "requirejs": "~2.1.10",
     "sinon": "1.7.3",
-    "socket.io": "^1.0.6"
+    "socket.io": "^1.0.6",
+    "starttls": "https://github.com/felixhammerl/starttls/tarball/master",
+    "underscore": "^1.6.0"
   }
 }
