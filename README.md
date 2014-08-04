@@ -30,6 +30,13 @@ Include ```tcp-socket.js``` and ```forge``` in your markup. It will attach itsel
         ca: 'insert PEM-formatted cert here' // certificate pinning
     });
 
+**A note on node-webkit**:
+It is not that easy to figure out if you want to assume a browser or node environment on hybrid platforms like node-webkit. This gets even harder if you use require.js, too. There is one simple workaround, though:
+
+    window.nodeRequire = window.require
+
+If you remember the node.js require as a global in node-webkit, we can safely call the native node.js TCP API.
+
 **A note on TLS**: [Native TLS is not yet available for chrome.socket.](https://code.google.com/p/chromium/issues/detail?id=132896). For this reason, we cannot tap into the browser's native SSL certificates. If you want to use TLS, you must provide a certificate for pinning! This shim depends on [forge](https://github.com/digitalbazaar/forge) for TLS. Please consult the [forge project page](https://github.com/digitalbazaar/forge) for examples how to make forge available in your application and/or have a look at the example in this repository.
 
 You can either supply the socket with a certificate, or use a trust-on-first-use based approach, where the socket is accepted in the first try and you will receive a callback with the certificate. Use this certificate in subsequent interactions with this host. Host authenticity is evaluated based on their Common Name (or SubjectAltNames) and the certificate's public key fingerprint.
