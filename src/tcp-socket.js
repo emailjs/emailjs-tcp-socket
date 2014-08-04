@@ -21,12 +21,12 @@
 (function(factory) {
     'use strict';
 
-    if (typeof define === 'function' && define.amd && typeof exports === 'undefined') {
+    if (typeof define === 'function' && define.amd && typeof nodeRequire === 'undefined') {
         // amd under chrome packaged app
         define(['forge'], factory.bind(null, navigator));
-    } else if (typeof define === 'function' && define.amd && typeof exports === 'object') {
+    } else if (typeof define === 'function' && define.amd && typeof nodeRequire !== 'undefined') {
         // amd under node-webkit
-        define([], factory.bind(null, navigator, null, require('net'), require('tls')));
+        define([], factory.bind(null, navigator, null, nodeRequire('net'), nodeRequire('tls')));
     } else if (typeof exports === 'object') {
         // node.js
         module.exports = factory(null, null, require('net'), require('tls'));
@@ -166,7 +166,7 @@
                         /*
                          * Please see the readme for an explanation of the behavior without a native TLS stack!
                          */
-                        
+
                         // without a pinned certificate, we'll just accept the connection and notify the upper layer
                         if (!self._ca) {
                             // notify the upper layer of the new cert

@@ -19,6 +19,7 @@
 
 	"globals": {
         "chrome": true,
+        "nodeRequire": true,
         "forge": true,
 		"console": true,
 		"define": true,
