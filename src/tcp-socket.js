@@ -147,7 +147,8 @@
             self._stopReading = false;
             self._socketId = 0;
 
-            if (self.ssl) {
+            // setup forge as fallback if native TLS is unavailable
+            if (self.ssl && !chrome.socket.secure) {
                 if (config.options.ca) {
                     self._ca = forge.pki.certificateFromPem(config.options.ca);
                 }
@@ -243,18 +244,32 @@
                         return;
                     }
 
-                    if (self.ssl) {
-                        // the socket is up, do the tls handshake
+                    if (self.ssl && chrome.socket.secure) {
+                        // use native TLS stack if available
+                        chrome.socket.secure(self._socketId, {}, function(tlsResult) {
+                            if (tlsResult !== 0) {
+                                self._emit('error', new Error('TLS handshake failed'));
+                                self.close();
+                                return;
+                            }
+
+                            // socket is up and running
+                            self._emit('open');
+                            // let's start reading
+                            read.bind(self)();
+                        });
+
+                    } else if (self.ssl) {
+                        // use forge for TLS as fallback
                         self._tlsClient.handshake();
+                        // let's start reading
+                        read.bind(self)();
                     } else {
                         // socket is up and running
                         self._emit('open');
+                        // let's start reading
+                        read.bind(self)();
                     }
-
-                    // let's start reading
-                    read.bind(self)();
-
-                    return;
                 });
             });
         };
@@ -276,7 +291,7 @@
                 }
 
                 // data is available
-                if (self.ssl) {
+                if (self.ssl && !chrome.socket.secure) {
                     // feed the data to the tls socket
                     self._tlsClient.process(a2s(readInfo.data));
                 } else {
@@ -310,7 +325,7 @@
         };
 
         TCPSocket.prototype.send = function(data) {
-            if (this.ssl) {
+            if (this.ssl && !chrome.socket.secure) {
                 this._tlsClient.prepare(a2s(data)); // give data to forge to be prepared for tls
                 return;
             }
