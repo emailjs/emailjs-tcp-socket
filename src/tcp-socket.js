@@ -60,6 +60,10 @@
         // chrome packaged app
         chromeShim();
     }
+    if (typeof window === 'object' && typeof io === 'function') {
+        // websocket proxy
+        wsShim();
+    }
 
     function nodeShim() {
 
@@ -342,6 +346,195 @@
 
     } // end of chromeShim
 
+    function wsShim() {
+
+        var _socket;
+
+        /**
+         * TCPSocket constructor. Invoked indirectly via TCPSocket.open
+         */
+        TCPSocket = function(config) {
+            var self = this;
+
+            config.options.useSecureTransport = (typeof config.options.useSecureTransport !== 'undefined') ? config.options.useSecureTransport : false;
+            config.options.binaryType = config.options.binaryType || 'arraybuffer';
+
+            // public flags
+            self.host = config.host;
+            self.port = config.port;
+            self.ssl = config.options.useSecureTransport;
+            self.bufferedAmount = 0;
+            self.readyState = 'connecting';
+            self.binaryType = config.options.binaryType;
+            self._socketId = false;
+
+            if (self.binaryType !== 'arraybuffer') {
+                throw new Error('Only arraybuffers are supported!');
+            }
+
+            // internal flags
+            self._stopReading = false;
+
+            if (self.ssl) {
+                if (config.options.ca) {
+                    self._ca = forge.pki.certificateFromPem(config.options.ca);
+                }
+
+                self._tlsClient = forge.tls.createConnection({
+                    server: false,
+                    verify: function(connection, verified, depth, certs) {
+                        if (!(certs && certs[0])) {
+                            return false;
+                        }
+
+                        if (!verifyCertificate(certs[0], self.host)) {
+                            return false;
+                        }
+
+                        /*
+                         * Please see the readme for an explanation of the behavior without a native TLS stack!
+                         */
+
+                        // without a pinned certificate, we'll just accept the connection and notify the upper layer
+                        if (!self._ca) {
+                            // notify the upper layer of the new cert
+                            self.oncert(forge.pki.certificateToPem(certs[0]));
+                            // succeed only if self.oncert is implemented (otherwise forge catches the error)
+                            return true;
+                        }
+
+                        // if we have a pinned certificate, things get a little more complicated:
+                        // - leaf certificates pin the host directly, e.g. for self-signed certificates
+                        // - we also allow intermediate certificates, for providers that are able to sign their own certs.
+
+                        // detect if this is a certificate used for signing by testing if the common name different from the hostname.
+                        // also, an intermediate cert has no SANs, at least none that match the hostname.
+                        if (!verifyCertificate(self._ca, self.host)) {
+                            // verify certificate through a valid certificate chain
+                            return self._ca.verify(certs[0]);
+                        }
+
+                        // verify certificate through host certificate pinning
+                        var fpPinned = forge.pki.getPublicKeyFingerprint(self._ca.publicKey, {
+                            encoding: 'hex'
+                        });
+                        var fpRemote = forge.pki.getPublicKeyFingerprint(certs[0].publicKey, {
+                            encoding: 'hex'
+                        });
+
+                        // check if cert fingerprints match
+                        if (fpPinned === fpRemote) {
+                            return true;
+                        }
+
+                        // notify the upper layer of the new cert
+                        self.oncert(forge.pki.certificateToPem(certs[0]));
+                        // fail when fingerprint does not match
+                        return false;
+
+                    },
+                    connected: function(connection) {
+                        if (!connection) {
+                            self._emit('error', new Error('Unable to connect'));
+                            self.close();
+                            return;
+                        }
+
+                        self._emit('open');
+                    },
+                    tlsDataReady: function(connection) {
+                        // encrypted data ready to written to the socket
+                        self._send(s2a(connection.tlsData.getBytes())); // send encrypted data
+                    },
+                    dataReady: function(connection) {
+                        // encrypted data received from the socket is decrypted
+                        self._emit('data', s2a(connection.data.getBytes()));
+                    },
+                    closed: function() {
+                        self.close();
+                    },
+                    error: function(connection, error) {
+                        self._emit('error', error);
+                        self.close();
+                    }
+                });
+            }
+
+            if (!_socket || _socket.destroyed) {
+                _socket = io(window.SOCKET_IO_URL, window.SOCKET_IO_OPTIONS);
+            }
+
+            setTimeout(function() {
+                _socket.emit('open', {
+                    host: self.host,
+                    port: self.port
+                }, function(socketId) {
+                    self._socketId = socketId;
+
+                    if (self.ssl) {
+                        // the socket is up, do the tls handshake
+                        self._tlsClient.handshake();
+                    } else {
+                        // socket is up and running
+                        self._emit('open');
+                    }
+
+                    _socket.on('data-' + self._socketId, function(chunk) {
+                        if (self.ssl) {
+                            // feed the data to the tls socket
+                            self._tlsClient.process(a2s(chunk));
+                        } else {
+                            // emit data event
+                            self._emit('data', chunk);
+                        }
+                    });
+
+                    _socket.on('error-' + self._socketId, function(message) {
+                        self._emit('error', new Error(message));
+                    });
+
+                    _socket.on('close-' + self._socketId, function() {
+                        self._emit('close');
+                    });
+                });
+            }, 0);
+        };
+
+        //
+        // API
+        //
+
+        TCPSocket.open = function(host, port, options) {
+            return new TCPSocket({
+                host: host,
+                port: port,
+                options: options || {}
+            });
+        };
+
+        TCPSocket.prototype.close = function() {
+            var self = this;
+            this.readyState = 'closing';
+            _socket.emit('end-' + self._socketId);
+        };
+
+        TCPSocket.prototype.send = function(data) {
+            if (this.ssl) {
+                this._tlsClient.prepare(a2s(data)); // give data to forge to be prepared for tls
+                return;
+            }
+
+            this._send(data); // send the arraybuffer
+        };
+
+        TCPSocket.prototype._send = function(data) {
+            var self = this;
+            _socket.emit('data-' + self._socketId, data, function() {
+                self._emit('drain');
+            });
+        };
+
+    } // end of wsShim
 
     TCPSocket.listen = TCPSocket.prototype.resume = TCPSocket.prototype.suspend = TCPSocket.prototype.upgradeToSecure = function() {
         throw new Error('API not supported');
@@ -365,7 +558,7 @@
             cb = this.onclose;
         }
 
-        if (typeof cb === 'undefined') {
+        if (typeof cb !== 'function') {
             return;
         }
 

@@ -2,3 +2,5 @@ node_modules/
 npm-debug.log
 .DS_Store
 test/integration/chrome/tcp-socket.js
+test/lib
+runtime.json

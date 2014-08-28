@@ -1,0 +1,16 @@
+{
+  "name": "ws-proxy",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Tunnel ws <-> tcp",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "config": "^1.0.2",
+    "express": "^4.8.3",
+    "morgan": "^1.2.3",
+    "npmlog": "^0.1.1",
+    "socket.io": "^1.0.6"
+  }
+}
