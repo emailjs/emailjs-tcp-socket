@@ -104,14 +104,6 @@
         // API
         //
 
-        TCPSocket.open = function(host, port, options) {
-            return new TCPSocket({
-                host: host,
-                port: port,
-                options: options || {}
-            });
-        };
-
         TCPSocket.prototype.close = function() {
             this.readyState = 'closing';
             this._socket.end();
@@ -156,84 +148,7 @@
                     self._ca = forge.pki.certificateFromPem(config.options.ca);
                 }
 
-                self._tlsClient = forge.tls.createConnection({
-                    server: false,
-                    verify: function(connection, verified, depth, certs) {
-                        if (!(certs && certs[0])) {
-                            return false;
-                        }
-
-                        if (!verifyCertificate(certs[0], self.host)) {
-                            return false;
-                        }
-
-                        /*
-                         * Please see the readme for an explanation of the behavior without a native TLS stack!
-                         */
-
-                        // without a pinned certificate, we'll just accept the connection and notify the upper layer
-                        if (!self._ca) {
-                            // notify the upper layer of the new cert
-                            self.oncert(forge.pki.certificateToPem(certs[0]));
-                            // succeed only if self.oncert is implemented (otherwise forge catches the error)
-                            return true;
-                        }
-
-                        // if we have a pinned certificate, things get a little more complicated:
-                        // - leaf certificates pin the host directly, e.g. for self-signed certificates
-                        // - we also allow intermediate certificates, for providers that are able to sign their own certs.
-
-                        // detect if this is a certificate used for signing by testing if the common name different from the hostname.
-                        // also, an intermediate cert has no SANs, at least none that match the hostname.
-                        if (!verifyCertificate(self._ca, self.host)) {
-                            // verify certificate through a valid certificate chain
-                            return self._ca.verify(certs[0]);
-                        }
-
-                        // verify certificate through host certificate pinning
-                        var fpPinned = forge.pki.getPublicKeyFingerprint(self._ca.publicKey, {
-                            encoding: 'hex'
-                        });
-                        var fpRemote = forge.pki.getPublicKeyFingerprint(certs[0].publicKey, {
-                            encoding: 'hex'
-                        });
-
-                        // check if cert fingerprints match
-                        if (fpPinned === fpRemote) {
-                            return true;
-                        }
-
-                        // notify the upper layer of the new cert
-                        self.oncert(forge.pki.certificateToPem(certs[0]));
-                        // fail when fingerprint does not match
-                        return false;
-
-                    },
-                    connected: function(connection) {
-                        if (!connection) {
-                            self._emit('error', new Error('Unable to connect'));
-                            self.close();
-                            return;
-                        }
-
-                        self._emit('open');
-                    },
-                    tlsDataReady: function(connection) {
-                        // encrypted data ready to written to the socket
-                        self._send(s2a(connection.tlsData.getBytes())); // send encrypted data
-                    },
-                    dataReady: function(connection) {
-                        // encrypted data received from the socket is decrypted
-                        self._emit('data', s2a(connection.data.getBytes()));
-                    },
-                    closed: function() {
-                        self.close();
-                    },
-                    error: function(connection, error) {
-                        self._emit('error', error);
-                        self.close();
-                    }
-                });
+                self._tlsClient = createTlsClient.bind(self)();
             }
 
             // connect the socket
@@ -294,14 +209,6 @@
         //
         // API
         //
-
-        TCPSocket.open = function(host, port, options) {
-            return new TCPSocket({
-                host: host,
-                port: port,
-                options: options || {}
-            });
-        };
 
         TCPSocket.prototype.close = function() {
             this.readyState = 'closing';
@@ -387,84 +294,7 @@
                     self._ca = forge.pki.certificateFromPem(config.options.ca);
                 }
 
-                self._tlsClient = forge.tls.createConnection({
-                    server: false,
-                    verify: function(connection, verified, depth, certs) {
-                        if (!(certs && certs[0])) {
-                            return false;
-                        }
-
-                        if (!verifyCertificate(certs[0], self.host)) {
-                            return false;
-                        }
-
-                        /*
-                         * Please see the readme for an explanation of the behavior without a native TLS stack!
-                         */
-
-                        // without a pinned certificate, we'll just accept the connection and notify the upper layer
-                        if (!self._ca) {
-                            // notify the upper layer of the new cert
-                            self.oncert(forge.pki.certificateToPem(certs[0]));
-                            // succeed only if self.oncert is implemented (otherwise forge catches the error)
-                            return true;
-                        }
-
-                        // if we have a pinned certificate, things get a little more complicated:
-                        // - leaf certificates pin the host directly, e.g. for self-signed certificates
-                        // - we also allow intermediate certificates, for providers that are able to sign their own certs.
-
-                        // detect if this is a certificate used for signing by testing if the common name different from the hostname.
-                        // also, an intermediate cert has no SANs, at least none that match the hostname.
-                        if (!verifyCertificate(self._ca, self.host)) {
-                            // verify certificate through a valid certificate chain
-                            return self._ca.verify(certs[0]);
-                        }
-
-                        // verify certificate through host certificate pinning
-                        var fpPinned = forge.pki.getPublicKeyFingerprint(self._ca.publicKey, {
-                            encoding: 'hex'
-                        });
-                        var fpRemote = forge.pki.getPublicKeyFingerprint(certs[0].publicKey, {
-                            encoding: 'hex'
-                        });
-
-                        // check if cert fingerprints match
-                        if (fpPinned === fpRemote) {
-                            return true;
-                        }
-
-                        // notify the upper layer of the new cert
-                        self.oncert(forge.pki.certificateToPem(certs[0]));
-                        // fail when fingerprint does not match
-                        return false;
-
-                    },
-                    connected: function(connection) {
-                        if (!connection) {
-                            self._emit('error', new Error('Unable to connect'));
-                            self.close();
-                            return;
-                        }
-
-                        self._emit('open');
-                    },
-                    tlsDataReady: function(connection) {
-                        // encrypted data ready to written to the socket
-                        self._send(s2a(connection.tlsData.getBytes())); // send encrypted data
-                    },
-                    dataReady: function(connection) {
-                        // encrypted data received from the socket is decrypted
-                        self._emit('data', s2a(connection.data.getBytes()));
-                    },
-                    closed: function() {
-                        self.close();
-                    },
-                    error: function(connection, error) {
-                        self._emit('error', error);
-                        self.close();
-                    }
-                });
+                self._tlsClient = createTlsClient.bind(self)();
             }
 
             setTimeout(function() {
@@ -507,13 +337,6 @@
         // API
         //
 
-        TCPSocket.open = function(host, port, options) {
-            return new TCPSocket({
-                host: host,
-                port: port,
-                options: options || {}
-            });
-        };
 
         TCPSocket.prototype.close = function() {
             var self = this;
@@ -538,6 +361,18 @@
         };
 
     } // end of wsShim
+
+    //
+    // Common API
+    //
+
+    TCPSocket.open = function(host, port, options) {
+        return new TCPSocket({
+            host: host,
+            port: port,
+            options: options || {}
+        });
+    };
 
     TCPSocket.listen = TCPSocket.prototype.resume = TCPSocket.prototype.suspend = TCPSocket.prototype.upgradeToSecure = function() {
         throw new Error('API not supported');
@@ -575,6 +410,89 @@
     //
     // Helper functions
     //
+
+    var createTlsClient = function() {
+        var self = this;
+
+        return forge.tls.createConnection({
+            server: false,
+            verify: function(connection, verified, depth, certs) {
+                if (!(certs && certs[0])) {
+                    return false;
+                }
+
+                if (!verifyCertificate(certs[0], self.host)) {
+                    return false;
+                }
+
+                /*
+                 * Please see the readme for an explanation of the behavior without a native TLS stack!
+                 */
+
+                // without a pinned certificate, we'll just accept the connection and notify the upper layer
+                if (!self._ca) {
+                    // notify the upper layer of the new cert
+                    self.oncert(forge.pki.certificateToPem(certs[0]));
+                    // succeed only if self.oncert is implemented (otherwise forge catches the error)
+                    return true;
+                }
+
+                // if we have a pinned certificate, things get a little more complicated:
+                // - leaf certificates pin the host directly, e.g. for self-signed certificates
+                // - we also allow intermediate certificates, for providers that are able to sign their own certs.
+
+                // detect if this is a certificate used for signing by testing if the common name different from the hostname.
+                // also, an intermediate cert has no SANs, at least none that match the hostname.
+                if (!verifyCertificate(self._ca, self.host)) {
+                    // verify certificate through a valid certificate chain
+                    return self._ca.verify(certs[0]);
+                }
+
+                // verify certificate through host certificate pinning
+                var fpPinned = forge.pki.getPublicKeyFingerprint(self._ca.publicKey, {
+                    encoding: 'hex'
+                });
+                var fpRemote = forge.pki.getPublicKeyFingerprint(certs[0].publicKey, {
+                    encoding: 'hex'
+                });
+
+                // check if cert fingerprints match
+                if (fpPinned === fpRemote) {
+                    return true;
+                }
+
+                // notify the upper layer of the new cert
+                self.oncert(forge.pki.certificateToPem(certs[0]));
+                // fail when fingerprint does not match
+                return false;
+
+            },
+            connected: function(connection) {
+                if (!connection) {
+                    self._emit('error', new Error('Unable to connect'));
+                    self.close();
+                    return;
+                }
+
+                self._emit('open');
+            },
+            tlsDataReady: function(connection) {
+                // encrypted data ready to written to the socket
+                self._send(s2a(connection.tlsData.getBytes())); // send encrypted data
+            },
+            dataReady: function(connection) {
+                // encrypted data received from the socket is decrypted
+                self._emit('data', s2a(connection.data.getBytes()));
+            },
+            closed: function() {
+                self.close();
+            },
+            error: function(connection, error) {
+                self._emit('error', error);
+                self.close();
+            }
+        });
+    };
 
     /**
      * Verifies a host name by the Common Name or Subject Alternative Names
