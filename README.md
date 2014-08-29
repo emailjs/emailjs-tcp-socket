@@ -67,13 +67,27 @@ WebSocket shim adds a new configuration object `ws` to TCPSocket.open
   * **url** is the url for the WebSocket proxy server (defaults to '/')
   * **options** are [Socket.io options](http://socket.io/docs/client-api/#io(url:string,-opts:object):socket)
 
+```javascript
+var socket = TCPSocket.open('127.0.0.1', 9000, {
+    ...
+    ws: {
+        url: 'http://localhost:8889',
+        options: {
+            upgrade: false
+        }
+    }
+});
+```
+
 To run WebSocket integration tests run
 
     NODE_ENV=integration node ws-proxy/server.js
 
-And then
+And then run
 
     grunt ws-integration-test
+
+or open [integration.html](test/integration/ws/integration.html) in your browser.
 
 WebSocket integration tests are disabled by default because these do not run correctly under PhantomJS
 
