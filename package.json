@@ -8,10 +8,12 @@
     "url": "git://github.com/whiteout-io/tcp-socket.git"
   },
   "author": "Felix Hammerl",
-  "maintainers": [{
-    "name": "Felix Hammerl",
-    "email": "felix@whiteout.io"
-  }],
+  "maintainers": [
+    {
+      "name": "Felix Hammerl",
+      "email": "felix@whiteout.io"
+    }
+  ],
   "license": "MIT",
   "scripts": {
     "pretest": "cd node_modules/node-forge/ && npm install && npm run minify && cd ../..",
@@ -26,15 +28,18 @@
   },
   "devDependencies": {
     "amdefine": "~0.1.0",
+    "chai": "~1.7.2",
+    "express": "^4.8.6",
     "grunt": "~0.4.1",
-    "grunt-mocha-phantomjs": "~0.4.0",
     "grunt-contrib-connect": "~0.6.0",
-    "grunt-contrib-jshint": "~0.8.0",
     "grunt-contrib-copy": "~0.4.1",
+    "grunt-contrib-jshint": "~0.8.0",
+    "grunt-express-server": "^0.4.19",
+    "grunt-mocha-phantomjs": "~0.4.0",
     "grunt-mocha-test": "~0.6.2",
     "mocha": "~1.16.2",
     "requirejs": "~2.1.10",
-    "chai": "~1.7.2",
-    "sinon": "1.7.3"
+    "sinon": "1.7.3",
+    "socket.io": "^1.0.6"
   }
 }

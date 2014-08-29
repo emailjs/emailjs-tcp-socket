@@ -4,7 +4,7 @@ module.exports = function(grunt) {
     // Project configuration.
     grunt.initConfig({
         jshint: {
-            all: ['*.js', 'src/*.js', 'test/unit/*.js', 'test/integration/*.js'],
+            all: ['*.js', 'src/*.js', 'test/unit/*.js', 'test/integration/*.js', 'test/integration/ws/*.js', 'ws-proxy/*.js'],
             options: {
                 jshintrc: '.jshintrc'
             }
@@ -21,11 +21,23 @@ module.exports = function(grunt) {
         },
 
         mocha_phantomjs: {
-            all: {
+            chrome: {
                 options: {
                     reporter: 'spec'
                 },
-                src: ['test/unit/unit.html']
+                src: ['test/unit/chrome-unit.html']
+            },
+            'ws-unit': {
+                options: {
+                    reporter: 'spec'
+                },
+                src: ['test/unit/ws-unit.html']
+            },
+            'ws-integration': {
+                options: {
+                    reporter: 'spec'
+                },
+                src: ['test/integration/ws/integration.html']
             }
         },
 
@@ -60,6 +72,17 @@ module.exports = function(grunt) {
                 ],
                 dest: 'test/lib/'
             },
+        },
+        express: {
+            options: {
+                port: 8889
+            },
+            all: {
+                options: {
+                    script: 'ws-proxy/server.js',
+                    node_env: 'integration'
+                }
+            }
         }
     });
 
@@ -69,7 +92,10 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-mocha-test');
     grunt.loadNpmTasks('grunt-mocha-phantomjs');
     grunt.loadNpmTasks('grunt-contrib-connect');
+    grunt.loadNpmTasks('grunt-express-server');
 
-    grunt.registerTask('test', ['jshint', 'mochaTest', 'mocha_phantomjs']);
+    grunt.registerTask('ws-integration-test', ['express', 'mocha_phantomjs:ws-integration']); // fails in phantomjs
+    grunt.registerTask('test', ['jshint', 'mochaTest', 'mocha_phantomjs:chrome', 'mocha_phantomjs:ws-unit'/*, 'ws-integration-test'*/]);
+
     grunt.registerTask('default', ['copy', 'test']);
 };
