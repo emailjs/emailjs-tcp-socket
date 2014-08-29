@@ -375,6 +375,13 @@
             // internal flags
             self._stopReading = false;
 
+            if (!_socket || _socket.destroyed) {
+                _socket = io(
+                    config.options.ws && config.options.ws.url,
+                    config.options.ws && config.options.ws.options
+                );
+            }
+
             if (self.ssl) {
                 if (config.options.ca) {
                     self._ca = forge.pki.certificateFromPem(config.options.ca);
@@ -458,10 +465,6 @@
                         self.close();
                     }
                 });
-            }
-
-            if (!_socket || _socket.destroyed) {
-                _socket = io(window.SOCKET_IO_URL, window.SOCKET_IO_OPTIONS);
             }
 
             setTimeout(function() {

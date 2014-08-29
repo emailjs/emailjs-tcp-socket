@@ -62,6 +62,11 @@ For everything else, see the [Mozilla TCPSocket API Documentation](https://devel
 
 **A note on WebSockets**: Run the websocket proxy (socket.io + express) to use TCPSocket straight from the browser.
 
+WebSocket shim adds a new configuration object `ws` to TCPSocket.open
+
+  * **url** is the url for the WebSocket proxy server (defaults to '/')
+  * **options** are [Socket.io options](http://socket.io/docs/client-api/#io(url:string,-opts:object):socket)
+
 To run WebSocket integration tests run
 
     NODE_ENV=integration node ws-proxy/server.js
