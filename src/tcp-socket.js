@@ -441,6 +441,15 @@
             });
         };
 
+        TCPSocket.prototype.upgradeToSecure = function() {
+            if (this.ssl) {
+                return;
+            }
+
+            this.ssl = true;
+            this._tlsClient = createTlsClient.bind(this)();
+            this._tlsClient.handshake();
+        };
     } // end of wsShim
 
     //
