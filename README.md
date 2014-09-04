@@ -51,7 +51,7 @@ Here's how the TLS socket will behave when presented with a server certificate:
 * If a certificate was pinned, but the server presents another certificate (according to the public key fingerprint), it calls .oncert() to inform you about changes, but rejects the connection
 * If a certificate was pinned and the server certificate's public key fingerprint matches the pinned certificate, the connection is accepted. .oncert will **not** be called in this case!
 
-**A note on STARTTLS**: `upgrateToSecure()` will return immediately. If the TLS negotiation fails, the socket will throw an error and close. The socket does NOT buffer any writes that occur in the meantime, so you may end up intervening with the TLS negotiation. If said behavior is a problem in your protocol, please open an issue and/or submit a PR. Also, STARTTLS is **experimental** in Chrome Apps on Chrome 38+, where chrome.socket.secure() is available.
+**A note on STARTTLS**: `upgrateToSecure()` will return immediately. If the TLS negotiation fails, the socket will throw an error and close. The socket buffers writes that occur in the meantime and writes the data out altogether when the TLS handshake is done. If said behavior is a problem in your protocol, please open an issue and/or submit a PR. Also, STARTTLS is **experimental** in Chrome Apps on Chrome 38+, where chrome.socket.secure() is available.
 
 For everything else, see the [Mozilla TCPSocket API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/TCPSocket).
 
