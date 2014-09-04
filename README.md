@@ -1,20 +1,13 @@
 tcp-socket
 ==========
 
-This shim brings [Mozilla-flavored](https://developer.mozilla.org/en-US/docs/WebAPI/TCP_Socket) version of the [Raw Socket API](http://www.w3.org/TR/raw-sockets/) to node.js and Chromium. Its purpose is to enable apps to use the same codebase in Firefox OS, Chrome OS, and on the server.
+This shim brings [Mozilla-flavored](https://developer.mozilla.org/en-US/docs/WebAPI/TCP_Socket) version of the [Raw Socket API](http://www.w3.org/TR/raw-sockets/) to node.js, Chromium apps, and websockets (via socket.io). Its purpose is to enable apps to use the same codebase in Firefox OS, Chrome OS, and on the server.
 
 [![Build Status](https://travis-ci.org/whiteout-io/tcp-socket.svg?branch=dev/umd)](https://travis-ci.org/whiteout-io/tcp-socket)
 
-Feel free to you include in your [Chrome Packaged App](http://developer.chrome.com/extensions/apps)!
+Feel free to include in your [Chrome App](http://developer.chrome.com/extensions/apps)!
 
 # Usage
-
-An example can be found in ```example/```:
-
-    1) cd example && node server.js
-    2) add the example-folder as a chrome app (chrome settings -> extensions -> check 'developer mode' -> load unpacked extension)
-    3) launch the extension
-    4) have fun with navigator.TCPSocket
 
 Include ```tcp-socket.js``` and ```forge``` in your markup. It will attach itself to the navigator object.
 
@@ -58,6 +51,8 @@ Here's how the TLS socket will behave when presented with a server certificate:
 * If a certificate was pinned, but the server presents another certificate (according to the public key fingerprint), it calls .oncert() to inform you about changes, but rejects the connection
 * If a certificate was pinned and the server certificate's public key fingerprint matches the pinned certificate, the connection is accepted. .oncert will **not** be called in this case!
 
+**A note on STARTTLS**: `upgrateToSecure()` will return immediately. If the TLS negotiation fails, the socket will throw an error and close. The socket does NOT buffer any writes that occur in the meantime, so you may end up intervening with the TLS negotiation. If said behavior is a problem in your protocol, please open an issue and/or submit a PR. Also, STARTTLS is **experimental** in Chrome Apps on Chrome 38+, where chrome.socket.secure() is available.
+
 For everything else, see the [Mozilla TCPSocket API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/TCPSocket).
 
 **A note on WebSockets**: Run the websocket proxy (socket.io + express) to use TCPSocket straight from the browser.
@@ -98,7 +93,6 @@ The following API is not available with this shim:
 * #listen
 * #resume
 * #suspend
-* #upgradeToSecure
 
 ## Installation
 
