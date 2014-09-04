@@ -1,6 +1,6 @@
 {
   "name": "tcp-socket",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "main": "src/tcp-socket",
   "description": "This shim brings the W3C Raw Socket API to node.js and Chromium. Its purpose is to enable apps to use the same api in Firefox OS, Chrome OS, and on the server.",
   "repository": {

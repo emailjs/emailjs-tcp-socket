@@ -171,6 +171,10 @@
             self.readyState = 'connecting';
             self.binaryType = config.options.binaryType;
 
+            // handles writes during starttls handshake
+            self._startTlsBuffer = [];
+            self._startTlsHandshakeInProgress = false;
+
             if (self.binaryType !== 'arraybuffer') {
                 throw new Error('Only arraybuffers are supported!');
             }
@@ -250,7 +254,7 @@
                 }
 
                 // data is available
-                if (self.ssl && !chrome.socket.secure) {
+                if ((self.ssl || self._startTlsHandshakeInProgress) && !chrome.socket.secure) {
                     // feed the data to the tls socket
                     self._tlsClient.process(a2s(readInfo.data));
                 } else {
@@ -278,11 +282,11 @@
         TCPSocket.prototype.upgradeToSecure = function() {
             var self = this;
 
-            if (self.ssl) {
+            if (self.ssl || self._startTlsHandshakeInProgress) {
                 return;
             }
 
-            self.ssl = true;
+            self._startTlsHandshakeInProgress = true;
 
             if (chrome.socket.secure) {
                 chrome.socket.secure(self._socketId, {}, function(tlsResult) {
@@ -290,6 +294,14 @@
                         self._emit('error', new Error('TLS handshake failed'));
                         self.close();
                         return;
+                    }
+
+                    self._startTlsHandshakeInProgress = false;
+                    self.ssl = true;
+
+                    // empty the buffer
+                    while (self._startTlsBuffer.length) {
+                        self.send(self._startTlsBuffer.shift());
                     }
 
                     // let's start reading
@@ -302,6 +314,11 @@
         };
 
         TCPSocket.prototype.send = function(data) {
+            if (this._startTlsHandshakeInProgress) {
+                this._startTlsBuffer.push(data);
+                return;
+            }
+
             if (this.ssl && !chrome.socket.secure) {
                 this._tlsClient.prepare(a2s(data)); // give data to forge to be prepared for tls
                 return;
@@ -356,6 +373,10 @@
             self.binaryType = config.options.binaryType;
             self._socketId = false;
 
+            // handles writes during starttls handshake
+            self._startTlsBuffer = [];
+            self._startTlsHandshakeInProgress = false;
+
             if (self.binaryType !== 'arraybuffer') {
                 throw new Error('Only arraybuffers are supported!');
             }
@@ -394,7 +415,7 @@
                     }
 
                     _socket.on('data-' + self._socketId, function(chunk) {
-                        if (self.ssl) {
+                        if (self.ssl || self._startTlsHandshakeInProgress) {
                             // feed the data to the tls socket
                             self._tlsClient.process(a2s(chunk));
                         } else {
@@ -426,6 +447,11 @@
         };
 
         TCPSocket.prototype.send = function(data) {
+            if (this._startTlsHandshakeInProgress) {
+                this._startTlsBuffer.push(data);
+                return;
+            }
+
             if (this.ssl) {
                 this._tlsClient.prepare(a2s(data)); // give data to forge to be prepared for tls
                 return;
@@ -442,11 +468,11 @@
         };
 
         TCPSocket.prototype.upgradeToSecure = function() {
-            if (this.ssl) {
+            if (this.ssl || this._startTlsHandshakeInProgress) {
                 return;
             }
 
-            this.ssl = true;
+            this._startTlsHandshakeInProgress = true;
             this._tlsClient = createTlsClient.bind(this)();
             this._tlsClient.handshake();
         };
@@ -570,7 +596,20 @@
                     return;
                 }
 
-                self._emit('open');
+                if (!self._startTlsHandshakeInProgress) {
+                    // regular tls handshake done, nothing else to do here
+                    self._emit('open');
+                    return;
+                }
+
+                // starttls handshake done, empty the write buffer, don't send another "open" event
+                self._startTlsHandshakeInProgress = false;
+                self.ssl = true;
+
+                // empty the buffer
+                while (self._startTlsBuffer.length) {
+                    self.send(self._startTlsBuffer.shift());
+                }
             },
             tlsDataReady: function(connection) {
                 // encrypted data ready to written to the socket
