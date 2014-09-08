@@ -43,8 +43,8 @@
     };
 
     // detect runtime
-    if (root) {
-        // browser environment... check for native support
+    if (root && typeof io === 'undefined') {
+        // check for native support
         root.TCPSocket = root.TCPSocket || root.mozTCPSocket;
 
         if (root.TCPSocket && typeof root.TCPSocket === "object") {
