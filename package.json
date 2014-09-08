@@ -1,6 +1,6 @@
 {
   "name": "tcp-socket",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "main": "src/tcp-socket",
   "description": "This shim brings the W3C Raw Socket API to node.js and Chromium. Its purpose is to enable apps to use the same api in Firefox OS, Chrome OS, and on the server.",
   "repository": {
@@ -8,12 +8,10 @@
     "url": "git://github.com/whiteout-io/tcp-socket.git"
   },
   "author": "Felix Hammerl",
-  "maintainers": [
-    {
-      "name": "Felix Hammerl",
-      "email": "felix@whiteout.io"
-    }
-  ],
+  "maintainers": [{
+    "name": "Felix Hammerl",
+    "email": "felix@whiteout.io"
+  }],
   "license": "MIT",
   "scripts": {
     "pretest": "cd node_modules/node-forge/ && npm install && npm run minify && cd ../..",
