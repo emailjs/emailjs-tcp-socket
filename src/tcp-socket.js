@@ -52,15 +52,14 @@
             return root.TCPSocket;
         }
     }
+
     if (net && tls) {
         // node.js -> use native net/tls impl
         nodeShim();
-    }
-    if (typeof chrome !== 'undefined' && chrome.socket) {
+    } else if (typeof chrome !== 'undefined' && chrome.socket) {
         // chrome packaged app
         chromeShim();
-    }
-    if (typeof window === 'object' && typeof io === 'function') {
+    } else if (typeof window === 'object' && typeof io === 'function') {
         // websocket proxy
         wsShim();
     }
@@ -386,7 +385,7 @@
 
             if (!_socket || _socket.destroyed) {
                 _socket = io(
-                    config.options.ws && config.options.ws.url,
+                    (config.options.ws && config.options.ws.url) || window.location.origin,
                     config.options.ws && config.options.ws.options
                 );
             }
