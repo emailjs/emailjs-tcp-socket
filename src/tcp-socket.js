@@ -178,21 +178,21 @@
                 throw new Error('Only arraybuffers are supported!');
             }
 
-            if (config.options.ca) {
-                self._ca = forge.pki.certificateFromPem(config.options.ca);
-            }
-
             // internal flags
             self._stopReading = false;
             self._socketId = 0;
 
             // setup forge as fallback if native TLS is unavailable
-            if (self.ssl && !chrome.socket.secure) {
+            if (!chrome.socket.secure) {
+                // pin the tls certificate, if present
                 if (config.options.ca) {
                     self._ca = forge.pki.certificateFromPem(config.options.ca);
                 }
 
-                self._tlsClient = createTlsClient.bind(self)();
+                // setup the forge tls client
+                if (self.ssl) {
+                    self._tlsClient = createTlsClient.bind(self)();
+                }
             }
 
             // connect the socket
@@ -390,11 +390,13 @@
                 );
             }
 
-            if (self.ssl) {
-                if (config.options.ca) {
-                    self._ca = forge.pki.certificateFromPem(config.options.ca);
-                }
+            // pin the tls certificate, if present
+            if (config.options.ca) {
+                self._ca = forge.pki.certificateFromPem(config.options.ca);
+            }
 
+            // setup the forge tls client
+            if (self.ssl) {
                 self._tlsClient = createTlsClient.bind(self)();
             }
 
