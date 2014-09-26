@@ -2,7 +2,6 @@
 
 define(function(require) {
     var expect = require('chai').expect,
-        sinon = require('sinon'),
         TcpSocket = require('tcp-socket');
 
     describe('TcpSocket chrome shim integration tests', function() {
@@ -27,7 +26,8 @@ define(function(require) {
                 socket.onopen = function() {
                     opened = true;
                 };
-                socket.onerror = function() {
+                socket.onerror = function(e) {
+                    console.log(e.data);
                     errored = true;
                 };
                 socket.ondata = function(e) {
@@ -53,7 +53,8 @@ define(function(require) {
                 socket.onopen = function() {
                     opened = true;
                 };
-                socket.onerror = function() {
+                socket.onerror = function(e) {
+                    console.log(e.data);
                     errored = true;
                 };
                 socket.ondata = function(e) {
@@ -77,11 +78,12 @@ define(function(require) {
                     opened = true;
                     socket.upgradeToSecure();
                 };
-                socket.onerror = function() {
+                socket.onerror = function(e) {
+                    console.log(e.data);
                     errored = true;
                 };
                 socket.oncert = function(pem) {
-                    certReceived = !!pem
+                    certReceived = !!pem;
                 };
                 socket.ondata = function(e) {
                     bytesCtr += e.data.byteLength;
@@ -108,9 +110,10 @@ define(function(require) {
                     opened = true;
                 };
                 socket.oncert = function(pem) {
-                    certReceived = !!pem
+                    certReceived = !!pem;
                 };
-                socket.onerror = function() {
+                socket.onerror = function(e) {
+                    console.log(e.data);
                     errored = true;
                 };
                 socket.ondata = function(e) {
@@ -137,9 +140,10 @@ define(function(require) {
                     opened = true;
                 };
                 socket.oncert = function(pem) {
-                    certReceived = !!pem
+                    certReceived = !!pem;
                 };
-                socket.onerror = function() {
+                socket.onerror = function(e) {
+                    console.log(e.data);
                     errored = true;
                 };
                 socket.ondata = function(e) {

@@ -18,12 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-(function(factory) {
+(function(root, factory) {
     'use strict';
 
     if (typeof define === 'function' && define.amd && typeof nodeRequire === 'undefined') {
-        // amd under chrome packaged app
-        define(['forge'], factory.bind(null, navigator));
+        // amd
+        define(['tcp-socket-tls'], factory.bind(null, navigator));
     } else if (typeof define === 'function' && define.amd && typeof nodeRequire !== 'undefined') {
         // amd under node-webkit
         define([], factory.bind(null, navigator, null, nodeRequire('net'), nodeRequire('tls')));
@@ -32,9 +32,9 @@
         module.exports = factory(null, null, require('net'), require('tls'));
     } else {
         // global browser import
-        navigator.TCPSocket = factory(navigator, forge);
+        navigator.TCPSocket = factory(navigator, root.TLS);
     }
-}(function(root, forge, net, tls) {
+}(this, function(root, TLS, net, tls) {
     'use strict';
 
     // the class to be implemented
@@ -149,6 +149,20 @@
             self._attachListeners();
         };
 
+        // node buffer -> array buffer
+        function toArrayBuffer(buffer) {
+            var view = new Uint8Array(buffer.length);
+            for (var i = 0; i < buffer.length; ++i) {
+                view[i] = buffer[i];
+            }
+            return view.buffer;
+        }
+
+        // array buffer -> node buffer
+        function toBuffer(ab) {
+            return new Buffer(new Uint8Array(ab));
+        }
+
     } // end of nodeShim
 
     function chromeShim() {
@@ -165,34 +179,29 @@
             // public flags
             self.host = config.host;
             self.port = config.port;
-            self.ssl = config.options.useSecureTransport;
+            self.ssl = false;
             self.bufferedAmount = 0;
             self.readyState = 'connecting';
             self.binaryType = config.options.binaryType;
-
-            // handles writes during starttls handshake
-            self._startTlsBuffer = [];
-            self._startTlsHandshakeInProgress = false;
 
             if (self.binaryType !== 'arraybuffer') {
                 throw new Error('Only arraybuffers are supported!');
             }
 
             // internal flags
-            self._stopReading = false;
             self._socketId = 0;
+            self._ca = config.options.ca;
+            self._useTLS = config.options.useSecureTransport;
+            self._useSTARTTLS = false;
+
+            // handles writes during starttls handshake, chrome socket only
+            self._startTlsBuffer = [];
+            self._startTlsHandshakeInProgress = false;
 
             // setup forge as fallback if native TLS is unavailable
-            if (!chrome.socket.secure) {
-                // pin the tls certificate, if present
-                if (config.options.ca) {
-                    self._ca = forge.pki.certificateFromPem(config.options.ca);
-                }
-
+            if (!chrome.socket.secure && self._useTLS) {
                 // setup the forge tls client
-                if (self.ssl) {
-                    self._tlsClient = createTlsClient.bind(self)();
-                }
+                createTLS.bind(self)();
             }
 
             // connect the socket
@@ -206,7 +215,8 @@
                         return;
                     }
 
-                    if (self.ssl && chrome.socket.secure) {
+                    // do an immediate TLS handshake if self._useTLS === true
+                    if (self._useTLS && chrome.socket.secure) {
                         // use native TLS stack if available
                         chrome.socket.secure(self._socketId, {}, function(tlsResult) {
                             if (tlsResult !== 0) {
@@ -220,10 +230,9 @@
                             // let's start reading
                             read.bind(self)();
                         });
-
-                    } else if (self.ssl) {
+                    } else if (self._useTLS) {
                         // use forge for TLS as fallback
-                        self._tlsClient.handshake();
+                        self._tls.handshake();
                         // let's start reading
                         read.bind(self)();
                     } else {
@@ -253,13 +262,14 @@
                 }
 
                 // data is available
-                if ((self.ssl || self._startTlsHandshakeInProgress) && !chrome.socket.secure) {
+                if ((self._useTLS || self._useSTARTTLS) && !chrome.socket.secure) {
                     // feed the data to the tls socket
-                    self._tlsClient.process(a2s(readInfo.data));
+                    self._tls.processInbound(readInfo.data);
                 } else {
                     // emit data event
                     self._emit('data', readInfo.data);
                 }
+
                 read.bind(self)(); // start the next read
             });
         };
@@ -281,11 +291,11 @@
         TCPSocket.prototype.upgradeToSecure = function() {
             var self = this;
 
-            if (self.ssl || self._startTlsHandshakeInProgress) {
+            if (self.ssl || self._useSTARTTLS) {
                 return;
             }
 
-            self._startTlsHandshakeInProgress = true;
+            self._useSTARTTLS = true;
 
             if (chrome.socket.secure) {
                 chrome.socket.secure(self._socketId, {}, function(tlsResult) {
@@ -295,7 +305,6 @@
                         return;
                     }
 
-                    self._startTlsHandshakeInProgress = false;
                     self.ssl = true;
 
                     // empty the buffer
@@ -307,23 +316,23 @@
                     read.bind(self)();
                 });
             } else {
-                self._tlsClient = createTlsClient.bind(self)();
-                self._tlsClient.handshake();
+                createTLS.bind(self)();
+                self._tls.handshake();
             }
         };
 
-        TCPSocket.prototype.send = function(data) {
-            if (this._startTlsHandshakeInProgress) {
-                this._startTlsBuffer.push(data);
+        TCPSocket.prototype.send = function(buffer) {
+            if ((self._useTLS || self._useSTARTTLS) && !chrome.socket.secure) {
+                // give buffer to forge to be prepared for tls
+                this._tls.prepareOutbound(buffer);
+                return;
+            } else if (this._useSTARTTLS && !this.ssl) {
+                // buffer data until handshake is done
+                this._startTlsBuffer.push(buffer);
                 return;
             }
 
-            if (this.ssl && !chrome.socket.secure) {
-                this._tlsClient.prepare(a2s(data)); // give data to forge to be prepared for tls
-                return;
-            }
-
-            this._send(data); // send the arraybuffer
+            this._send(buffer); // send the arraybuffer
         };
 
         TCPSocket.prototype._send = function(data) {
@@ -337,7 +346,7 @@
             chrome.socket.write(self._socketId, data, function(writeInfo) {
                 if (writeInfo.bytesWritten < 0 && self._socketId !== 0) {
                     // if the socket is already 0, it has already been closed. no need to alert then...
-                    self._emit('error', new Error('Could not write to socket ' + self._socketId + '. Chrome error code: ' + writeInfo.bytesWritten));
+                    self._emit('error', new Error('Could not write ' + data.byteLength + ' bytes to socket ' + self._socketId + '. Chrome error code: ' + writeInfo.bytesWritten));
                     self._socketId = 0;
                     self.close();
 
@@ -346,6 +355,38 @@
 
                 self._emit('drain');
             });
+        };
+
+        // 
+        // Event Handlers
+        // 
+
+        TCPSocket.prototype.oncert = function(cert) {
+            this.oncert(cert);
+        };
+
+        TCPSocket.prototype.onerror = function(message) {
+            this._emit('error', new Error(message));
+            this.close();
+        };
+
+        TCPSocket.prototype.onclose = function() {
+            this.close();
+        };
+
+        TCPSocket.prototype.onopen = function() {
+            this.ssl = true;
+            if (this._useTLS) {
+                this._emit('open');
+            }
+        };
+
+        TCPSocket.prototype.onprepared = function(buffer) {
+            this._send(buffer);
+        };
+
+        TCPSocket.prototype.onprocessed = function(buffer) {
+            this._emit('data', buffer);
         };
 
     } // end of chromeShim
@@ -366,22 +407,20 @@
             // public flags
             self.host = config.host;
             self.port = config.port;
-            self.ssl = config.options.useSecureTransport;
+            self.ssl = false;
             self.bufferedAmount = 0;
             self.readyState = 'connecting';
             self.binaryType = config.options.binaryType;
             self._socketId = false;
-
-            // handles writes during starttls handshake
-            self._startTlsBuffer = [];
-            self._startTlsHandshakeInProgress = false;
 
             if (self.binaryType !== 'arraybuffer') {
                 throw new Error('Only arraybuffers are supported!');
             }
 
             // internal flags
-            self._stopReading = false;
+            self._ca = config.options.ca;
+            self._useTLS = config.options.useSecureTransport;
+            self._useSTARTTLS = false;
 
             if (!_socket || _socket.destroyed) {
                 _socket = io(
@@ -390,14 +429,9 @@
                 );
             }
 
-            // pin the tls certificate, if present
-            if (config.options.ca) {
-                self._ca = forge.pki.certificateFromPem(config.options.ca);
-            }
-
             // setup the forge tls client
-            if (self.ssl) {
-                self._tlsClient = createTlsClient.bind(self)();
+            if (self._useTLS) {
+                createTLS.bind(self)();
             }
 
             setTimeout(function() {
@@ -407,18 +441,18 @@
                 }, function(socketId) {
                     self._socketId = socketId;
 
-                    if (self.ssl) {
+                    if (self._useTLS) {
                         // the socket is up, do the tls handshake
-                        self._tlsClient.handshake();
+                        self._tls.handshake();
                     } else {
                         // socket is up and running
                         self._emit('open');
                     }
 
                     _socket.on('data-' + self._socketId, function(chunk) {
-                        if (self.ssl || self._startTlsHandshakeInProgress) {
+                        if (self._useTLS || self._useSTARTTLS) {
                             // feed the data to the tls socket
-                            self._tlsClient.process(a2s(chunk));
+                            self._tls.processInbound(chunk);
                         } else {
                             // emit data event
                             self._emit('data', chunk);
@@ -436,10 +470,10 @@
             }, 0);
         };
 
+
         //
         // API
         //
-
 
         TCPSocket.prototype.close = function() {
             var self = this;
@@ -447,18 +481,15 @@
             _socket.emit('end-' + self._socketId);
         };
 
-        TCPSocket.prototype.send = function(data) {
-            if (this._startTlsHandshakeInProgress) {
-                this._startTlsBuffer.push(data);
+        TCPSocket.prototype.send = function(buffer) {
+            if (self._useTLS || self._useSTARTTLS) {
+                // give buffer to forge to be prepared for tls
+                this._tls.prepareOutbound(buffer);
                 return;
             }
 
-            if (this.ssl) {
-                this._tlsClient.prepare(a2s(data)); // give data to forge to be prepared for tls
-                return;
-            }
-
-            this._send(data); // send the arraybuffer
+            // send the arraybuffer
+            this._send(buffer);
         };
 
         TCPSocket.prototype._send = function(data) {
@@ -469,14 +500,50 @@
         };
 
         TCPSocket.prototype.upgradeToSecure = function() {
-            if (this.ssl || this._startTlsHandshakeInProgress) {
+            var self = this;
+
+            if (self.ssl || self._useSTARTTLS) {
                 return;
             }
 
-            this._startTlsHandshakeInProgress = true;
-            this._tlsClient = createTlsClient.bind(this)();
-            this._tlsClient.handshake();
+            self._useSTARTTLS = true;
+            createTLS.bind(self)();
+            self._tls.handshake();
         };
+
+
+        // 
+        // Event Handlers
+        // 
+
+        TCPSocket.prototype.oncert = function(cert) {
+            this.oncert(cert);
+        };
+
+        TCPSocket.prototype.onerror = function(message) {
+            this._emit('error', new Error(message));
+            this.close();
+        };
+
+        TCPSocket.prototype.onclose = function() {
+            this.close();
+        };
+
+        TCPSocket.prototype.onopen = function() {
+            this.ssl = true;
+            if (this._useTLS) {
+                this._emit('open');
+            }
+        };
+
+        TCPSocket.prototype.onprepared = function(buffer) {
+            this._send(buffer);
+        };
+
+        TCPSocket.prototype.onprocessed = function(buffer) {
+            this._emit('data', buffer);
+        };
+
     } // end of wsShim
 
     //
@@ -496,12 +563,31 @@
     TCPSocket.prototype.suspend = TCPSocket.prototype.suspend || apiNotSupported;
     TCPSocket.prototype.upgradeToSecure = TCPSocket.prototype.upgradeToSecure || apiNotSupported;
 
-
     function apiNotSupported() {
         throw new Error('API not supported');
     }
 
     // Internal use
+
+    // utility function, to be bound to the respective websocket & chrome.socket shim TCPSocket object
+    var createTLS = function() {
+        // create the tls client
+        this._tls = new TLS();
+
+        // configure the tls client
+        this._tls.configure({
+            host: this.host,
+            ca: this._ca
+        });
+
+        // attach the handlers
+        this._tls.onerror = this.onerror.bind(this);
+        this._tls.oncert = this.oncert.bind(this);
+        this._tls.onclose = this.onclose.bind(this);
+        this._tls.onopen = this.onopen.bind(this);
+        this._tls.onprepared = this.onprepared.bind(this);
+        this._tls.onprocessed = this.onprocessed.bind(this);
+    };
 
     TCPSocket.prototype._emit = function(type, data) {
         var cb;
@@ -529,177 +615,6 @@
             data: data
         });
     };
-
-    //
-    // Helper functions
-    //
-
-    var createTlsClient = function() {
-        var self = this;
-
-        return forge.tls.createConnection({
-            server: false,
-            verify: function(connection, verified, depth, certs) {
-                if (!(certs && certs[0])) {
-                    return false;
-                }
-
-                if (!verifyCertificate(certs[0], self.host)) {
-                    return false;
-                }
-
-                /*
-                 * Please see the readme for an explanation of the behavior without a native TLS stack!
-                 */
-
-                // without a pinned certificate, we'll just accept the connection and notify the upper layer
-                if (!self._ca) {
-                    // notify the upper layer of the new cert
-                    self.oncert(forge.pki.certificateToPem(certs[0]));
-                    // succeed only if self.oncert is implemented (otherwise forge catches the error)
-                    return true;
-                }
-
-                // if we have a pinned certificate, things get a little more complicated:
-                // - leaf certificates pin the host directly, e.g. for self-signed certificates
-                // - we also allow intermediate certificates, for providers that are able to sign their own certs.
-
-                // detect if this is a certificate used for signing by testing if the common name different from the hostname.
-                // also, an intermediate cert has no SANs, at least none that match the hostname.
-                if (!verifyCertificate(self._ca, self.host)) {
-                    // verify certificate through a valid certificate chain
-                    return self._ca.verify(certs[0]);
-                }
-
-                // verify certificate through host certificate pinning
-                var fpPinned = forge.pki.getPublicKeyFingerprint(self._ca.publicKey, {
-                    encoding: 'hex'
-                });
-                var fpRemote = forge.pki.getPublicKeyFingerprint(certs[0].publicKey, {
-                    encoding: 'hex'
-                });
-
-                // check if cert fingerprints match
-                if (fpPinned === fpRemote) {
-                    return true;
-                }
-
-                // notify the upper layer of the new cert
-                self.oncert(forge.pki.certificateToPem(certs[0]));
-                // fail when fingerprint does not match
-                return false;
-
-            },
-            connected: function(connection) {
-                if (!connection) {
-                    self._emit('error', new Error('Unable to connect'));
-                    self.close();
-                    return;
-                }
-
-                if (!self._startTlsHandshakeInProgress) {
-                    // regular tls handshake done, nothing else to do here
-                    self._emit('open');
-                    return;
-                }
-
-                // starttls handshake done, empty the write buffer, don't send another "open" event
-                self._startTlsHandshakeInProgress = false;
-                self.ssl = true;
-
-                // empty the buffer
-                while (self._startTlsBuffer.length) {
-                    self.send(self._startTlsBuffer.shift());
-                }
-            },
-            tlsDataReady: function(connection) {
-                // encrypted data ready to written to the socket
-                self._send(s2a(connection.tlsData.getBytes())); // send encrypted data
-            },
-            dataReady: function(connection) {
-                // encrypted data received from the socket is decrypted
-                self._emit('data', s2a(connection.data.getBytes()));
-            },
-            closed: function() {
-                self.close();
-            },
-            error: function(connection, error) {
-                self._emit('error', error);
-                self.close();
-            }
-        });
-    };
-
-    /**
-     * Verifies a host name by the Common Name or Subject Alternative Names
-     *
-     * @param {Object} cert A forge certificate object
-     * @param {String} host The host name, e.g. imap.gmail.com
-     * @return {Boolean} true, if host name matches certificate, otherwise false
-     */
-    function verifyCertificate(cert, host) {
-        var cn, cnRegex, subjectAltName, sanRegex;
-
-        cn = cert.subject.getField('CN');
-        if (cn && cn.value) {
-            cnRegex = new RegExp(cn.value.replace(/\./g, '\\.').replace(/\*/g, '.*'), 'i');
-            if (cnRegex.test(host)) {
-                return true;
-            }
-        }
-
-        subjectAltName = cert.getExtension({
-            name: 'subjectAltName'
-        });
-
-        if (!(subjectAltName && subjectAltName.altNames)) {
-            return false;
-        }
-
-        for (var i = subjectAltName.altNames.length - 1; i >= 0; i--) {
-            if (subjectAltName.altNames[i] && subjectAltName.altNames[i].value) {
-                sanRegex = new RegExp(subjectAltName.altNames[i].value.replace(/\./g, '\\.').replace(/\*/g, '.*'), 'i');
-                if (sanRegex.test(host)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    // array buffer -> singlebyte string
-    function a2s(buf) {
-        var view = new Uint8Array(buf),
-            str = '';
-        for (var i = 0, j = view.length; i < j; i++) {
-            str += String.fromCharCode(view[i]);
-        }
-        return str;
-    }
-
-    // singlebyte string -> array buffer
-    function s2a(str) {
-        var view = new Uint8Array(str.length);
-        for (var i = 0, j = str.length; i < j; i++) {
-            view[i] = str.charCodeAt(i);
-        }
-        return view.buffer;
-    }
-
-    // node buffer -> array buffer
-    function toArrayBuffer(buffer) {
-        var view = new Uint8Array(buffer.length);
-        for (var i = 0; i < buffer.length; ++i) {
-            view[i] = buffer[i];
-        }
-        return view.buffer;
-    }
-
-    // array buffer -> node buffer
-    function toBuffer(ab) {
-        return new Buffer(new Uint8Array(ab));
-    }
 
     if (root) {
         // add TCPSocket to root object
