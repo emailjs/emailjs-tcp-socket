@@ -55,8 +55,8 @@
                 // without a pinned certificate, we'll just accept the connection and notify the upper layer
                 if (!self._ca) {
                     // notify the upper layer of the new cert
-                    self.oncert(forge.pki.certificateToPem(certs[0]));
-                    // succeed only if self.oncert is implemented (otherwise forge catches the error)
+                    self.tlscert(forge.pki.certificateToPem(certs[0]));
+                    // succeed only if self.tlscert is implemented (otherwise forge catches the error)
                     return true;
                 }
 
@@ -85,22 +85,22 @@
                 }
 
                 // notify the upper layer of the new cert
-                self.oncert(forge.pki.certificateToPem(certs[0]));
+                self.tlscert(forge.pki.certificateToPem(certs[0]));
                 // fail when fingerprint does not match
                 return false;
 
             },
             connected: function(connection) {
                 if (!connection) {
-                    self.onerror('Unable to connect');
-                    self.onclose();
+                    self.tlserror('Unable to connect');
+                    self.tlsclose();
                     return;
                 }
 
                 // tls connection open
                 self.open = true;
 
-                self.onopen();
+                self.tlsopen();
 
                 // empty the buffer
                 while (self._outboundBuffer.length) {
@@ -109,18 +109,18 @@
             },
             tlsDataReady: function(connection) {
                 // encrypted data ready to be written to the socket
-                self.onprepared(s2a(connection.tlsData.getBytes()));
+                self.tlsoutbound(s2a(connection.tlsData.getBytes()));
             },
             dataReady: function(connection) {
                 // encrypted data received from the socket is decrypted
-                self.onprocessed(s2a(connection.data.getBytes()));
+                self.tlsinbound(s2a(connection.data.getBytes()));
             },
             closed: function() {
-                self.onclose();
+                self.tlsclose();
             },
             error: function(connection, error) {
-                self.onerror(error.message);
-                self.onclose();
+                self.tlserror(error.message);
+                self.tlsclose();
             }
         });
     };

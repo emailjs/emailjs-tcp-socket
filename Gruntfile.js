@@ -55,20 +55,14 @@ module.exports = function(grunt) {
                 expand: true,
                 flatten: true,
                 cwd: 'src/',
-                src: [
-                    'tcp-socket.js',
-                    'tcp-socket-tls.js'
-                ],
+                src: '*',
                 dest: 'test/lib/'
             },
             "src-chrome": {
                 expand: true,
                 flatten: true,
                 cwd: 'src/',
-                src: [
-                    'tcp-socket.js',
-                    'tcp-socket-tls.js'
-                ],
+                src: '*',
                 dest: 'test/integration/chrome/lib'
             },
             lib: {

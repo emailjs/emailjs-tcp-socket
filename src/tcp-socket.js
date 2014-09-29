@@ -37,6 +37,17 @@
 }(this, function(root, TLS, net, tls) {
     'use strict';
 
+    // Constants used for tls-worker
+    var EVENT_INBOUND = 'inbound',
+        EVENT_OUTBOUND = 'outbound',
+        EVENT_OPEN = 'open',
+        EVENT_CLOSE = 'close',
+        EVENT_ERROR = 'error',
+        EVENT_CONFIG = 'configure',
+        EVENT_CERT = 'cert',
+        EVENT_HANDSHAKE = 'handshake';
+
+
     // the class to be implemented
     var TCPSocket = function() {
         throw new Error('Runtime does not offer TCPSockets!');
@@ -193,6 +204,7 @@
             self._ca = config.options.ca;
             self._useTLS = config.options.useSecureTransport;
             self._useSTARTTLS = false;
+            self._tlsWorkerPath = config.options.tlsWorkerPath;
 
             // handles writes during starttls handshake, chrome socket only
             self._startTlsBuffer = [];
@@ -200,8 +212,8 @@
 
             // setup forge as fallback if native TLS is unavailable
             if (!chrome.socket.secure && self._useTLS) {
-                // setup the forge tls client
-                createTLS.bind(self)();
+                // setup the forge tls client or webworker
+                createTls.bind(self)();
             }
 
             // connect the socket
@@ -232,7 +244,14 @@
                         });
                     } else if (self._useTLS) {
                         // use forge for TLS as fallback
-                        self._tls.handshake();
+
+                        if (self._tlsWorker) {
+                            // signal the handshake to the worker
+                            self._tlsWorker.postMessage(createMessage(EVENT_HANDSHAKE));
+                        } else {
+                            // no worker, just use the regular tls client
+                            self._tls.handshake();
+                        }
                         // let's start reading
                         read.bind(self)();
                     } else {
@@ -263,8 +282,12 @@
 
                 // data is available
                 if ((self._useTLS || self._useSTARTTLS) && !chrome.socket.secure) {
-                    // feed the data to the tls socket
-                    self._tls.processInbound(readInfo.data);
+                    // feed the data to the tls client
+                    if (self._tlsWorker) {
+                        self._tlsWorker.postMessage(createMessage(EVENT_INBOUND, readInfo.data));
+                    } else {
+                        self._tls.processInbound(readInfo.data);
+                    }
                 } else {
                     // emit data event
                     self._emit('data', readInfo.data);
@@ -316,15 +339,28 @@
                     read.bind(self)();
                 });
             } else {
-                createTLS.bind(self)();
-                self._tls.handshake();
+                // setup the forge tls client or webworker
+                createTls.bind(self)();
+
+                if (self._tlsWorker) {
+                    // signal the handshake to the worker
+                    self._tlsWorker.postMessage(createMessage(EVENT_HANDSHAKE));
+                } else {
+                    // no worker, just use the regular tls client
+                    self._tls.handshake();
+                }
+
             }
         };
 
         TCPSocket.prototype.send = function(buffer) {
-            if ((self._useTLS || self._useSTARTTLS) && !chrome.socket.secure) {
+            if ((this._useTLS || this._useSTARTTLS) && !chrome.socket.secure) {
                 // give buffer to forge to be prepared for tls
-                this._tls.prepareOutbound(buffer);
+                if (this._tlsWorker) {
+                    this._tlsWorker.postMessage(createMessage(EVENT_OUTBOUND, buffer));
+                } else {
+                    this._tls.prepareOutbound(buffer);
+                }
                 return;
             } else if (this._useSTARTTLS && !this.ssl) {
                 // buffer data until handshake is done
@@ -356,39 +392,6 @@
                 self._emit('drain');
             });
         };
-
-        // 
-        // Event Handlers
-        // 
-
-        TCPSocket.prototype.oncert = function(cert) {
-            this.oncert(cert);
-        };
-
-        TCPSocket.prototype.onerror = function(message) {
-            this._emit('error', new Error(message));
-            this.close();
-        };
-
-        TCPSocket.prototype.onclose = function() {
-            this.close();
-        };
-
-        TCPSocket.prototype.onopen = function() {
-            this.ssl = true;
-            if (this._useTLS) {
-                this._emit('open');
-            }
-        };
-
-        TCPSocket.prototype.onprepared = function(buffer) {
-            this._send(buffer);
-        };
-
-        TCPSocket.prototype.onprocessed = function(buffer) {
-            this._emit('data', buffer);
-        };
-
     } // end of chromeShim
 
     function wsShim() {
@@ -421,6 +424,7 @@
             self._ca = config.options.ca;
             self._useTLS = config.options.useSecureTransport;
             self._useSTARTTLS = false;
+            self._tlsWorkerPath = config.options.tlsWorkerPath;
 
             if (!_socket || _socket.destroyed) {
                 _socket = io(
@@ -431,7 +435,9 @@
 
             // setup the forge tls client
             if (self._useTLS) {
-                createTLS.bind(self)();
+                // setup the forge tls client or webworker
+                createTls.bind(self)();
+
             }
 
             setTimeout(function() {
@@ -443,7 +449,13 @@
 
                     if (self._useTLS) {
                         // the socket is up, do the tls handshake
-                        self._tls.handshake();
+                        if (self._tlsWorker) {
+                            // signal the handshake to the worker
+                            self._tlsWorker.postMessage(createMessage(EVENT_HANDSHAKE));
+                        } else {
+                            // no worker, just use the regular tls client
+                            self._tls.handshake();
+                        }
                     } else {
                         // socket is up and running
                         self._emit('open');
@@ -452,7 +464,11 @@
                     _socket.on('data-' + self._socketId, function(chunk) {
                         if (self._useTLS || self._useSTARTTLS) {
                             // feed the data to the tls socket
-                            self._tls.processInbound(chunk);
+                            if (self._tlsWorker) {
+                                self._tlsWorker.postMessage(createMessage(EVENT_INBOUND, chunk));
+                            } else {
+                                self._tls.processInbound(chunk);
+                            }
                         } else {
                             // emit data event
                             self._emit('data', chunk);
@@ -484,7 +500,11 @@
         TCPSocket.prototype.send = function(buffer) {
             if (self._useTLS || self._useSTARTTLS) {
                 // give buffer to forge to be prepared for tls
-                this._tls.prepareOutbound(buffer);
+                if (this._tlsWorker) {
+                    this._tlsWorker.postMessage(createMessage(EVENT_OUTBOUND, buffer));
+                } else {
+                    this._tls.prepareOutbound(buffer);
+                }
                 return;
             }
 
@@ -507,44 +527,51 @@
             }
 
             self._useSTARTTLS = true;
-            createTLS.bind(self)();
-            self._tls.handshake();
-        };
+            // setup the forge tls client or webworker
+            createTls.bind(self)();
 
-
-        // 
-        // Event Handlers
-        // 
-
-        TCPSocket.prototype.oncert = function(cert) {
-            this.oncert(cert);
-        };
-
-        TCPSocket.prototype.onerror = function(message) {
-            this._emit('error', new Error(message));
-            this.close();
-        };
-
-        TCPSocket.prototype.onclose = function() {
-            this.close();
-        };
-
-        TCPSocket.prototype.onopen = function() {
-            this.ssl = true;
-            if (this._useTLS) {
-                this._emit('open');
+            if (self._tlsWorker) {
+                // signal the handshake to the worker
+                self._tlsWorker.postMessage(createMessage(EVENT_HANDSHAKE));
+            } else {
+                // no worker, just use the regular tls client
+                self._tls.handshake();
             }
         };
-
-        TCPSocket.prototype.onprepared = function(buffer) {
-            this._send(buffer);
-        };
-
-        TCPSocket.prototype.onprocessed = function(buffer) {
-            this._emit('data', buffer);
-        };
-
     } // end of wsShim
+
+    // 
+    // TLS shim event handlers, unused when native TLS
+    // 
+    
+    TCPSocket.prototype.tlscert = function(cert) {
+        this.oncert(cert);
+    };
+
+    TCPSocket.prototype.tlserror = function(message) {
+        this._emit('error', new Error(message));
+        this.close();
+    };
+
+    TCPSocket.prototype.tlsclose = function() {
+        this.close();
+    };
+
+    TCPSocket.prototype.tlsopen = function() {
+        this.ssl = true;
+        if (this._useTLS) {
+            this._emit('open');
+        }
+    };
+
+    TCPSocket.prototype.tlsoutbound = function(buffer) {
+        this._send(buffer);
+    };
+
+    TCPSocket.prototype.tlsinbound = function(buffer) {
+        this._emit('data', buffer);
+    };
+
 
     //
     // Common API
@@ -567,10 +594,27 @@
         throw new Error('API not supported');
     }
 
+
+    // 
+    // 
     // Internal use
+    // 
+    // 
 
     // utility function, to be bound to the respective websocket & chrome.socket shim TCPSocket object
-    var createTLS = function() {
+    var createTls = function() {
+        // create the respective TLS shim
+        if (window.Worker) {
+            createTlsWorker.bind(this)();
+        } else {
+            // setup the forge tls client
+            createTlsNoWorker.bind(this)();
+        }
+    };
+
+    // utility function, to be bound to the respective websocket & chrome.socket shim TCPSocket object
+    // creates an instance of the tls shim (no worker)
+    var createTlsNoWorker = function() {
         // create the tls client
         this._tls = new TLS();
 
@@ -581,13 +625,70 @@
         });
 
         // attach the handlers
-        this._tls.onerror = this.onerror.bind(this);
-        this._tls.oncert = this.oncert.bind(this);
-        this._tls.onclose = this.onclose.bind(this);
-        this._tls.onopen = this.onopen.bind(this);
-        this._tls.onprepared = this.onprepared.bind(this);
-        this._tls.onprocessed = this.onprocessed.bind(this);
+        this._tls.tlserror = this.tlserror.bind(this);
+        this._tls.tlscert = this.tlscert.bind(this);
+        this._tls.tlsclose = this.tlsclose.bind(this);
+        this._tls.tlsopen = this.tlsopen.bind(this);
+        this._tls.tlsoutbound = this.tlsoutbound.bind(this);
+        this._tls.tlsinbound = this.tlsinbound.bind(this);
     };
+
+    // utility function, to be bound to the respective websocket & chrome.socket shim TCPSocket object
+    // creates an instance of the tls shim running in a web worker
+    var createTlsWorker = function() {
+        var self = this,
+            workerPath = (typeof self._tlsWorkerPath === 'string') ? self._tlsWorkerPath : './tcp-socket-tls-worker.js';
+
+        self._tlsWorker = new Worker(workerPath);
+        self._tlsWorker.onmessage = function(e) {
+            var event = e.data.event,
+                message = e.data.message;
+
+            switch (event) {
+                case EVENT_CERT:
+                    self.tlscert(message);
+                    break;
+
+                case EVENT_ERROR:
+                    self.tlserror(message);
+                    break;
+
+                case EVENT_CLOSE:
+                    self.tlsclose(message);
+                    break;
+
+                case EVENT_OPEN:
+                    self.tlsopen(message);
+                    break;
+
+                case EVENT_OUTBOUND:
+                    self.tlsoutbound(message);
+                    break;
+
+                case EVENT_INBOUND:
+                    self.tlsinbound(message);
+                    break;
+            }
+        };
+
+        self._tlsWorker.onerror = function(e) {
+            var error = new Error('Error handling web worker: Line ' + e.lineno + ' in ' + e.filename + ': ' + e.message);
+            console.error(error);
+            self.tlserror(error.message);
+        };
+
+        self._tlsWorker.postMessage(createMessage(EVENT_CONFIG, {
+            host: self.host,
+            ca: self._ca
+        })); // start the worker
+    };
+
+    function createMessage(event, message) {
+        return {
+            event: event,
+            message: message
+        };
+    }
 
     TCPSocket.prototype._emit = function(type, data) {
         var cb;
