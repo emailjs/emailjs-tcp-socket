@@ -5,12 +5,13 @@ define(function(require) {
         TcpSocket = require('tcp-socket');
 
     describe('TcpSocket chrome shim integration tests', function() {
-        this.timeout(100000);
+        this.timeout(30000);
         var localhost = '127.0.0.1';
         var tcpPort = 8000,
             tlsPort = 9000,
             startTlsPort = 11000,
-            tlsInvalidCNPort = 10000;
+            tlsInvalidCNPort = 10000,
+            size = 20000000;
 
         var socket, opened, errored, certReceived, bytesCtr, origWorkerImpl;
 
@@ -49,7 +50,7 @@ define(function(require) {
                 socket.onclose = function() {
                     expect(opened).to.be.true;
                     expect(errored).to.be.false;
-                    expect(bytesCtr).to.equal(4096);
+                    expect(bytesCtr).to.equal(size);
 
                     done();
                 };
@@ -57,8 +58,8 @@ define(function(require) {
         });
 
         describe('tls', function() {
-            [false, true].forEach(function(disableWorker) {
-                it('should open, transfer, and close ' + (disableWorker ? 'with tls in worker' : 'with tls in main thread'), function(done) {
+            [true, false].forEach(function(disableWorker) {
+                it('should open, transfer, and close ' + (disableWorker ? 'with tls in main thread' : 'with tls in worker'), function(done) {
                     if (disableWorker) {
                         origWorkerImpl = window.Worker;
                         window.Worker = undefined;
@@ -83,7 +84,7 @@ define(function(require) {
                     socket.onclose = function() {
                         expect(opened).to.be.true;
                         expect(errored).to.be.false;
-                        expect(bytesCtr).to.equal(4096);
+                        expect(bytesCtr).to.equal(size);
 
                         done();
                     };
@@ -93,7 +94,7 @@ define(function(require) {
 
         describe('starttls', function() {
             [true, false].forEach(function(disableWorker) {
-                it('should open, transfer, and close ' + (disableWorker ? 'with tls in worker' : 'with tls in main thread'), function(done) {
+                it('should open, transfer, and close ' + (disableWorker ? 'with tls in main thread' : 'with tls in worker'), function(done) {
                     if (disableWorker) {
                         origWorkerImpl = window.Worker;
                         window.Worker = undefined;
@@ -121,7 +122,7 @@ define(function(require) {
                         expect(opened).to.be.true;
                         expect(certReceived).to.be.true;
                         expect(errored).to.be.false;
-                        expect(bytesCtr).to.equal(4096);
+                        expect(bytesCtr).to.equal(size);
 
                         done();
                     };
@@ -131,7 +132,7 @@ define(function(require) {
 
         describe('tls w/ false pinned cert', function() {
             [true, false].forEach(function(disableWorker) {
-                it('should error ' + (disableWorker ? 'with tls in worker' : 'with tls in main thread'), function(done) {
+                it('should error ' + (disableWorker ? 'with tls in main thread' : 'with tls in worker'), function(done) {
                     if (disableWorker) {
                         origWorkerImpl = window.Worker;
                         window.Worker = undefined;
@@ -170,7 +171,7 @@ define(function(require) {
 
         describe('tls w/ false invalid common name', function() {
             [true, false].forEach(function(disableWorker) {
-                it('should error ' + (disableWorker ? 'with tls in worker' : 'with tls in main thread'), function(done) {
+                it('should error ' + (disableWorker ? 'with tls in main thread' : 'with tls in worker'), function(done) {
                     if (disableWorker) {
                         origWorkerImpl = window.Worker;
                         window.Worker = undefined;

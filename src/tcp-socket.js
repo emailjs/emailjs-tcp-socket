@@ -280,17 +280,19 @@
                     return;
                 }
 
+                var buffer = readInfo.data;
+
                 // data is available
                 if ((self._useTLS || self._useSTARTTLS) && !chrome.socket.secure) {
                     // feed the data to the tls client
                     if (self._tlsWorker) {
-                        self._tlsWorker.postMessage(createMessage(EVENT_INBOUND, readInfo.data));
+                        self._tlsWorker.postMessage(createMessage(EVENT_INBOUND, buffer), [buffer]);
                     } else {
-                        self._tls.processInbound(readInfo.data);
+                        self._tls.processInbound(buffer);
                     }
                 } else {
                     // emit data event
-                    self._emit('data', readInfo.data);
+                    self._emit('data', buffer);
                 }
 
                 read.bind(self)(); // start the next read
@@ -357,7 +359,7 @@
             if ((this._useTLS || this._useSTARTTLS) && !chrome.socket.secure) {
                 // give buffer to forge to be prepared for tls
                 if (this._tlsWorker) {
-                    this._tlsWorker.postMessage(createMessage(EVENT_OUTBOUND, buffer));
+                    this._tlsWorker.postMessage(createMessage(EVENT_OUTBOUND, buffer), [buffer]);
                 } else {
                     this._tls.prepareOutbound(buffer);
                 }
@@ -461,17 +463,17 @@
                         self._emit('open');
                     }
 
-                    _socket.on('data-' + self._socketId, function(chunk) {
+                    _socket.on('data-' + self._socketId, function(buffer) {
                         if (self._useTLS || self._useSTARTTLS) {
                             // feed the data to the tls socket
                             if (self._tlsWorker) {
-                                self._tlsWorker.postMessage(createMessage(EVENT_INBOUND, chunk));
+                                self._tlsWorker.postMessage(createMessage(EVENT_INBOUND, buffer), [buffer]);
                             } else {
-                                self._tls.processInbound(chunk);
+                                self._tls.processInbound(buffer);
                             }
                         } else {
                             // emit data event
-                            self._emit('data', chunk);
+                            self._emit('data', buffer);
                         }
                     });
 
@@ -501,7 +503,7 @@
             if (self._useTLS || self._useSTARTTLS) {
                 // give buffer to forge to be prepared for tls
                 if (this._tlsWorker) {
-                    this._tlsWorker.postMessage(createMessage(EVENT_OUTBOUND, buffer));
+                    this._tlsWorker.postMessage(createMessage(EVENT_OUTBOUND, buffer), [buffer]);
                 } else {
                     this._tls.prepareOutbound(buffer);
                 }
