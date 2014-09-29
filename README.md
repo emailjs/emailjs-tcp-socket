@@ -32,6 +32,14 @@ If you remember the node.js require as a global in node-webkit, we can safely ca
 
 **A note on TLS**: [Native TLS is not yet available for chrome.socket.](https://code.google.com/p/chromium/issues/detail?id=132896). For this reason, we cannot tap into the browser's native SSL certificates. If you want to use TLS, you must provide a certificate for pinning! This shim depends on [forge](https://github.com/digitalbazaar/forge) for TLS. Please consult the [forge project page](https://github.com/digitalbazaar/forge) for examples how to make forge available in your application and/or have a look at the example in this repository.
 
+**Use of web workers**: If you are on a platform where we fall back to forge for TLS, we spin up a Web Worker to handle the TLS-related computation. Please keep in mind that `forge.min.js`, `tcp-socket-tls-worker.js`, and `tcp-socket-tls.js` **must** in the same folder! The configuration for `tlsWorkerPath` defaults to `'./tcp-socket-tls-worker.js'`. If you use a different path relative to your html file, you can provide it this when you fire up the socket.
+
+    // creates a TLS socket with a specific TLS worker path
+    var tls = navigator.TCPSocket.open('127.0.0.1', 9000, {
+        useSecureTransport: true,
+        tlsWorkerPath: 'relative/path/to/tcp-socket-tls-worker.js'
+    });
+
 You can either supply the socket with a certificate, or use a trust-on-first-use based approach, where the socket is accepted in the first try and you will receive a callback with the certificate. Use this certificate in subsequent interactions with this host. Host authenticity is evaluated based on their Common Name (or SubjectAltNames) and the certificate's public key fingerprint.
 
     var tls = navigator.TCPSocket.open('127.0.0.1', 9000, {
