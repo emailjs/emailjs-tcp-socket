@@ -82,17 +82,17 @@ var socket = TCPSocket.open('127.0.0.1', 9000, {
 });
 ```
 
-To run WebSocket integration tests run
+To run WebSocket integration tests that connect to `imap.gmail.com:993` run
 
     NODE_ENV=integration node ws-proxy/server.js
 
-And then run
+Parallel to that, run
 
-    grunt ws-integration-test
+    grunt connect:dev
 
-or open [integration.html](test/integration/ws/integration.html) in your browser.
+and open [http://localhost:12345/test/integration/ws/integration.html](http://localhost:12345/test/integration/ws/integration.html) in your browser.
 
-WebSocket integration tests are disabled by default because these do not run correctly under PhantomJS
+WebSocket integration tests can be run via `grunt ws-integration-test`. They are disabled by default because these do not run correctly under PhantomJS.
 
 # Unavailable API
 
