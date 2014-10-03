@@ -53,12 +53,12 @@
         }
     }
 
-    if (net && tls) {
-        // node.js -> use native net/tls impl
-        nodeShim();
-    } else if (typeof chrome !== 'undefined' && chrome.socket) {
+    if (typeof chrome !== 'undefined' && chrome.socket) {
         // chrome packaged app
         chromeShim();
+    } else if (net && tls) {
+        // node.js -> use native net/tls impl
+        nodeShim();
     } else if (typeof window === 'object' && typeof io === 'function') {
         // websocket proxy
         wsShim();
