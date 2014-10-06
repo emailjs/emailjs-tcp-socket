@@ -51,12 +51,26 @@ module.exports = function(grunt) {
         },
 
         copy: {
-            src: {
+            "src-unit": {
                 expand: true,
                 flatten: true,
                 cwd: 'src/',
-                src: ['tcp-socket.js'],
+                src: '*',
+                dest: 'test/lib/'
+            },
+            "src-chrome": {
+                expand: true,
+                flatten: true,
+                cwd: 'src/',
+                src: '*',
                 dest: 'test/integration/chrome/lib'
+            },
+            "src-ws": {
+                expand: true,
+                flatten: true,
+                cwd: 'src/',
+                src: '*',
+                dest: 'test/integration/ws/lib'
             },
             lib: {
                 expand: true,
@@ -85,6 +99,20 @@ module.exports = function(grunt) {
                     'requirejs/require.js'
                 ],
                 dest: 'test/integration/chrome/lib/'
+            },
+            ws: {
+                expand: true,
+                flatten: true,
+                cwd: 'node_modules/',
+                src: [
+                    'mocha/mocha.js',
+                    'mocha/mocha.css',
+                    'chai/chai.js',
+                    'node-forge/js/forge.min.js',
+                    'sinon/pkg/sinon.js',
+                    'requirejs/require.js'
+                ],
+                dest: 'test/integration/ws/lib/'
             },
         },
         express: {

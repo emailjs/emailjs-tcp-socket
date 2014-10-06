@@ -1,18 +1,5 @@
 'use strict';
 
-require.config({
-    baseUrl: '../../lib',
-    paths: {
-        'test': '../..',
-        'forge': 'forge.min'
-    },
-    shim: {
-        forge: {
-            exports: 'forge'
-        }
-    }
-});
-
 // add function.bind polyfill
 if (!Function.prototype.bind) {
     Function.prototype.bind = function(oThis) {
@@ -36,7 +23,22 @@ if (!Function.prototype.bind) {
     };
 }
 
+require.config({
+    baseUrl: 'lib',
+    paths: {
+        'forge': 'forge.min'
+    },
+    shim: {
+        sinon: {
+            exports: 'sinon',
+        },
+        forge: {
+            exports: 'forge'
+        }
+    }
+});
+
 mocha.setup('bdd');
-require(['../integration/ws/tcp-socket-test'], function() {
+require(['../tcp-socket-test'], function() {
     (window.mochaPhantomJS || window.mocha).run();
 });

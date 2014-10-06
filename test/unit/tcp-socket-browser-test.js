@@ -4,7 +4,7 @@ define(function(require) {
 
     var expect = require('chai').expect,
         sinon = require('sinon'),
-        TcpSocket = require('../../src/tcp-socket');
+        TcpSocket = require('tcp-socket');
 
     describe('TcpSocket chrome unit tests', function() {
         var socket;
