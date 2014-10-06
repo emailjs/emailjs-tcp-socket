@@ -606,7 +606,7 @@
     // utility function, to be bound to the respective websocket & chrome.socket shim TCPSocket object
     var createTls = function() {
         // create the respective TLS shim
-        if (window.Worker) {
+        if (window.Worker && typeof this._tlsWorkerPath === 'string') {
             createTlsWorker.bind(this)();
         } else {
             // setup the forge tls client
@@ -639,7 +639,7 @@
     // creates an instance of the tls shim running in a web worker
     var createTlsWorker = function() {
         var self = this,
-            workerPath = (typeof self._tlsWorkerPath === 'string') ? self._tlsWorkerPath : './tcp-socket-tls-worker.js';
+            workerPath = self._tlsWorkerPath;
 
         self._tlsWorker = new Worker(workerPath);
         self._tlsWorker.onmessage = function(e) {
