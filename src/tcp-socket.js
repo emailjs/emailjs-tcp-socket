@@ -27,8 +27,11 @@
     } else if (typeof define === 'function' && define.amd && typeof nodeRequire !== 'undefined') {
         // amd under node-webkit
         define([], factory.bind(null, navigator, null, nodeRequire('net'), nodeRequire('tls')));
+    } else if (typeof exports === 'object' && typeof navigator !== 'undefined') {
+        // common.js for browser apps with native socket support
+        module.exports = factory(navigator, require('./tcp-socket-tls'));
     } else if (typeof exports === 'object') {
-        // node.js
+        // common.js for node.js
         module.exports = factory(null, null, require('net'), require('tls'));
     } else {
         // global browser import
@@ -542,10 +545,10 @@
         };
     } // end of wsShim
 
-    // 
+    //
     // TLS shim event handlers, unused when native TLS
-    // 
-    
+    //
+
     TCPSocket.prototype.tlscert = function(cert) {
         this.oncert(cert);
     };
@@ -597,11 +600,11 @@
     }
 
 
-    // 
-    // 
+    //
+    //
     // Internal use
-    // 
-    // 
+    //
+    //
 
     // utility function, to be bound to the respective websocket & chrome.socket shim TCPSocket object
     var createTls = function() {
