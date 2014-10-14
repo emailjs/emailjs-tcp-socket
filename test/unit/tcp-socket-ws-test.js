@@ -23,6 +23,7 @@ define(function(require) {
             };
 
             stubIo.emit.withArgs('open').yields(42);
+            stubIo.emit.withArgs('hostname').yields('hostname.io');
 
             socket = TcpSocket.open('127.0.0.1', 9000, {
                 useSecureTransport: false,
@@ -81,6 +82,16 @@ define(function(require) {
 
                     socket.send(new Uint8Array([0, 1, 2]).buffer);
                 };
+            });
+        });
+
+        describe('getHostname', function() {
+            it('should return hostname', function(done) {
+                TcpSocket.getHostname(function(err, hostname) {
+                    expect(err).to.not.exist;
+                    expect(hostname).to.equal('hostname.io');
+                    done();
+                });
             });
         });
     });

@@ -402,6 +402,7 @@
     function wsShim() {
 
         var _socket;
+        var _hostname;
 
         /**
          * TCPSocket constructor. Invoked indirectly via TCPSocket.open
@@ -543,6 +544,17 @@
                 self._tls.handshake();
             }
         };
+
+        TCPSocket.getHostname = function(callback) {
+            if(_hostname){
+                return callback(null, _hostname);
+            }
+            _socket.emit('hostname', function(hostname) {
+                _hostname = hostname;
+                return callback(null, _hostname);
+            });
+        };
+
     } // end of wsShim
 
     //
