@@ -52,5 +52,13 @@ define(function(require) {
                 done();
             };
         });
+
+        it('should return proxy hostname', function(done) {
+            TcpSocket.getHostname(function(err, hostname) {
+                expect(err).to.not.exist;
+                expect(hostname).to.exist;
+                done();
+            });
+        });
     });
 });
