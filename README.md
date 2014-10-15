@@ -9,7 +9,7 @@ Feel free to include in your [Chrome App](http://developer.chrome.com/extensions
 
 # Usage
 
-Include ```tcp-socket.js``` and ```forge``` in your markup. It will attach itself to the navigator object.
+Include `tcp-socket.js` and `forge` in your markup. It will attach itself to the navigator object.
 
     <script src="forge.min.js"></script>
     <script src="tcp-socket.js"></script>
@@ -32,10 +32,7 @@ If you remember the node.js require as a global in node-webkit, we can safely ca
 
 **A note on TLS**: [Native TLS is not yet available for chrome.socket.](https://code.google.com/p/chromium/issues/detail?id=132896). For this reason, we cannot tap into the browser's native SSL certificates. If you want to use TLS, you must provide a certificate for pinning! This shim depends on [forge](https://github.com/digitalbazaar/forge) for TLS. Please consult the [forge project page](https://github.com/digitalbazaar/forge) for examples how to make forge available in your application and/or have a look at the example in this repository.
 
-**Use of web workers**: If you are on a platform where we fall back to forge for TLS, we spin up a Web Worker to handle the TLS-related computation. Please keep in mind that `forge.min.js`, `tcp-socket-tls-worker.js`, and `tcp-socket-tls.js` **must** in the same folder! If you use a different path relative to your html file, you can provide it this when you fire up the socket. **If tlsWorkerPath is undefined, no Web Worker will be started and the TLS-relatid computation will happen on the main thread!**
-
-**Web workers and browserify**:
-When you plan to use this socket wrapper with browserify, please browserify tcp-socket-tls-worker-browserify.js and use it to start the worker.
+**Use of web workers**: If you are on a platform where we fall back to forge for TLS, we can spin up a Web Worker to handle the TLS-related computation. To do this, you need to **browserify** `tcp-socket-tls-worker.js`. Please keep in mind that `forge.min.js` and the browserified version of `tcp-socket-tls-worker.js` **must** in the same folder! If you use a different path relative to your html file, you can provide it this file when you fire up the socket. **If tlsWorkerPath is undefined, no Web Worker will be started and the TLS-relatid computation will happen on the main thread!**
 
     // creates a TLS socket with a specific TLS worker path
     var tls = navigator.TCPSocket.open('127.0.0.1', 9000, {
@@ -73,17 +70,15 @@ WebSocket shim adds a new configuration object `ws` to TCPSocket.open
   * **url** is the url for the WebSocket proxy server (defaults to '/')
   * **options** are [Socket.io options](http://socket.io/docs/client-api/#io(url:string,-opts:object):socket)
 
-```javascript
-var socket = TCPSocket.open('127.0.0.1', 9000, {
-    ...
-    ws: {
-        url: 'http://localhost:8889',
-        options: {
-            upgrade: false
+    var socket = TCPSocket.open('127.0.0.1', 9000, {
+        ...
+        ws: {
+            url: 'http://localhost:8889',
+            options: {
+                upgrade: false
+            }
         }
-    }
-});
-```
+    });
 
 To run WebSocket integration tests that connect to `imap.gmail.com:993` run
 

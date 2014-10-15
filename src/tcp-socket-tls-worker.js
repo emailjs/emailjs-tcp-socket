@@ -33,11 +33,13 @@
         EVENT_CERT = 'cert',
         EVENT_HANDSHAKE = 'handshake';
 
-    // import forge and the wrapper
+    // import forge
     importScripts('forge.min.js');
-    importScripts('tcp-socket-tls.js');
+    
+    // require the TLS handler
+    var TLS = require('./tcp-socket-tls');
 
-    var tls = new self.TLS();
+    var tls = new TLS();
     tls.tlserror = tlserror;
     tls.tlscert = tlscert;
     tls.tlsclose = tlsclose;
