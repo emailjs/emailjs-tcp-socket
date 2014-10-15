@@ -24,6 +24,10 @@
     if (typeof define === 'function' && define.amd) {
         // amd under chrome packaged app
         define(['forge'], factory);
+    } else if (typeof exports === 'object' && typeof navigator !== 'undefined') {
+        // common.js for browser apps with native socket support
+        // fallback to forge browser global
+        module.exports = factory(forge);
     } else {
         // global browser import
         root.TLS = factory(root.forge);

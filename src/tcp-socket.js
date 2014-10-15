@@ -498,13 +498,12 @@
         //
 
         TCPSocket.prototype.close = function() {
-            var self = this;
             this.readyState = 'closing';
-            _socket.emit('end-' + self._socketId);
+            _socket.emit('end-' + this._socketId);
         };
 
         TCPSocket.prototype.send = function(buffer) {
-            if (self._useTLS || self._useSTARTTLS) {
+            if (this._useTLS || this._useSTARTTLS) {
                 // give buffer to forge to be prepared for tls
                 if (this._tlsWorker) {
                     this._tlsWorker.postMessage(createMessage(EVENT_OUTBOUND, buffer), [buffer]);
@@ -526,22 +525,20 @@
         };
 
         TCPSocket.prototype.upgradeToSecure = function() {
-            var self = this;
-
-            if (self.ssl || self._useSTARTTLS) {
+            if (this.ssl || this._useSTARTTLS) {
                 return;
             }
 
-            self._useSTARTTLS = true;
+            this._useSTARTTLS = true;
             // setup the forge tls client or webworker
-            createTls.bind(self)();
+            createTls.bind(this)();
 
-            if (self._tlsWorker) {
+            if (this._tlsWorker) {
                 // signal the handshake to the worker
-                self._tlsWorker.postMessage(createMessage(EVENT_HANDSHAKE));
+                this._tlsWorker.postMessage(createMessage(EVENT_HANDSHAKE));
             } else {
                 // no worker, just use the regular tls client
-                self._tls.handshake();
+                this._tls.handshake();
             }
         };
 
