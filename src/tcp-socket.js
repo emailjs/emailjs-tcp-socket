@@ -70,8 +70,8 @@
     if (net && tls) {
         // node.js -> use native net/tls impl
         nodeShim();
-    } else if (typeof chrome !== 'undefined' && chrome.socket) {
-        // chrome packaged app
+    } else if (typeof chrome !== 'undefined' && (chrome.socket || chrome.sockets)) {
+        // chrome packaged app using chrome.socket
         chromeShim();
     } else if (typeof window === 'object' && typeof io === 'function') {
         // websocket proxy
@@ -208,18 +208,48 @@
             self._useTLS = config.options.useSecureTransport;
             self._useSTARTTLS = false;
             self._tlsWorkerPath = config.options.tlsWorkerPath;
+            self._useLegacySocket = false;
+            self._useForgeTls = false;
 
             // handles writes during starttls handshake, chrome socket only
             self._startTlsBuffer = [];
             self._startTlsHandshakeInProgress = false;
 
-            // setup forge as fallback if native TLS is unavailable
-            if (!chrome.socket.secure && self._useTLS) {
-                // setup the forge tls client or webworker
-                createTls.bind(self)();
-            }
+            chrome.runtime.getPlatformInfo(function(platformInfo) {
 
-            // connect the socket
+                // 
+                // FIX START
+                // 
+
+                if (platformInfo.os.indexOf("cordova") !== -1) {
+                    // chrome.sockets.tcp.secure is not functional on cordova
+                    // https://github.com/MobileChromeApps/mobile-chrome-apps/issues/269
+                    self._useLegacySocket = false;
+                    self._useForgeTls = true;
+                } else {
+                    self._useLegacySocket = true;
+                    self._useForgeTls = false;
+                }
+
+                //
+                // FIX END
+                //
+
+                // fire up the socket
+                if (self._useLegacySocket) {
+                    self._createLegacySocket();
+                } else {
+                    self._createSocket();
+                }
+            });
+        };
+
+        /**
+         * Creates a socket using the deprecated chrome.socket API
+         */
+        TCPSocket.prototype._createLegacySocket = function() {
+            var self = this;
+
             chrome.socket.create('tcp', {}, function(createInfo) {
                 self._socketId = createInfo.socketId;
 
@@ -230,48 +260,145 @@
                         return;
                     }
 
-                    // do an immediate TLS handshake if self._useTLS === true
-                    if (self._useTLS && chrome.socket.secure) {
-                        // use native TLS stack if available
-                        chrome.socket.secure(self._socketId, {}, function(tlsResult) {
-                            if (tlsResult !== 0) {
-                                self._emit('error', new Error('TLS handshake failed'));
-                                self.close();
-                                return;
-                            }
-
-                            // socket is up and running
-                            self._emit('open');
-                            // let's start reading
-                            read.bind(self)();
-                        });
-                    } else if (self._useTLS) {
-                        // use forge for TLS as fallback
-
-                        if (self._tlsWorker) {
-                            // signal the handshake to the worker
-                            self._tlsWorker.postMessage(createMessage(EVENT_HANDSHAKE));
-                        } else {
-                            // no worker, just use the regular tls client
-                            self._tls.handshake();
-                        }
-                        // let's start reading
-                        read.bind(self)();
-                    } else {
-                        // socket is up and running
-                        self._emit('open');
-                        // let's start reading
-                        read.bind(self)();
-                    }
+                    self._onSocketConnected();
                 });
             });
         };
 
-        var read = function() {
+        /**
+         * Creates a socket using chrome.sockets.tcp
+         */
+        TCPSocket.prototype._createSocket = function() {
+            var self = this;
+
+            chrome.sockets.tcp.create({}, function(createInfo) {
+                self._socketId = createInfo.socketId;
+
+                // register for data events on the socket before connecting
+                chrome.sockets.tcp.onReceive.addListener(function(readInfo) {
+                    if (readInfo.socketId === self._socketId) {
+                        // process the data available on the socket
+                        self._onData(readInfo.data);
+                    }
+                });
+
+                // register for data error on the socket before connecting
+                chrome.sockets.tcp.onReceiveError.addListener(function(readInfo) {
+                    if (readInfo.socketId === self._socketId) {
+                        // socket closed remotely or broken
+                        self.close();
+                    }
+                });
+
+                chrome.sockets.tcp.connect(self._socketId, self.host, self.port, function(result) {
+                    if (result < 0) {
+                        self.readyState = 'closed';
+                        self._emit('error', new Error('Unable to connect'));
+                        return;
+                    }
+
+                    self._onSocketConnected();
+                });
+            });
+        };
+
+        /**
+         * Invoked once a socket has been connected:
+         * - Kicks off TLS handshake, if necessary
+         * - Starts reading from legacy socket, if necessary
+         */
+        TCPSocket.prototype._onSocketConnected = function() {
+            var self = this;
+
+            // do an immediate TLS handshake if self._useTLS === true
+            if (self._useTLS) {
+                self._upgradeToSecure(function() {
+                    if (!self._useForgeTls) {
+                        // chrome.socket is up and running by now, while forge needs to be
+                        // fed traffic and emits 'open' at a later point
+                        self._emit('open');
+
+                        // the tls handshake is done let's start reading from the legacy socket
+                        if (self._useLegacySocket) {
+                            self._readLegacySocket();
+                        }
+                    }
+                });
+            } else {
+                // socket is up and running
+                self._emit('open');
+                if (self._useLegacySocket) {
+                    self._readLegacySocket(); // let's start reading
+                }
+            }
+        };
+
+        /**
+         * Handles the rough edges for differences between chrome.socket and chrome.sockets.tcp
+         * for upgrading to a TLS connection with or without forge
+         */
+        TCPSocket.prototype._upgradeToSecure = function(callback) {
+            var self = this;
+
+            callback = callback || function() {};
+
+            if (self._useForgeTls) {
+                // setup the forge tls client or webworker as tls fallback
+                createTls.bind(self)();
+                callback();
+            } else if (!self._useLegacySocket) {
+                chrome.sockets.tcp.secure(self._socketId, onUpgraded);
+            } else if (self._useLegacySocket) {
+                chrome.socket.secure(self._socketId, onUpgraded);
+            }
+
+            // invoked after chrome.socket.secure or chrome.sockets.tcp.secure have been upgraded
+            function onUpgraded(tlsResult) {
+                if (tlsResult !== 0) {
+                    self._emit('error', new Error('TLS handshake failed. Reason: ' + chrome.runtime.lastError));
+                    self.close();
+                    return;
+                }
+
+                self.ssl = true;
+
+                // empty the buffer
+                while (self._startTlsBuffer.length) {
+                    self.send(self._startTlsBuffer.shift());
+                }
+
+                callback();
+            }
+        };
+
+        TCPSocket.prototype.upgradeToSecure = function() {
+            var self = this;
+
+            if (self.ssl || self._useSTARTTLS) {
+                return;
+            }
+
+            self._useSTARTTLS = true;
+            self._upgradeToSecure(function() {
+                if (self._useLegacySocket) {
+                    self._readLegacySocket(); // tls handshake is done, restart reading
+                }
+            });
+        };
+
+        /**
+         * Reads from a legacy chrome.socket.
+         */
+        TCPSocket.prototype._readLegacySocket = function() {
             var self = this;
 
             if (self._socketId === 0) {
                 // the socket is closed. omit read and stop further reads
+                return;
+            }
+
+            // don't read from chrome.socket if we have chrome.socket.secure a handshake in progress!
+            if ((self._useSTARTTLS || self._useTLS) && !self.ssl) {
                 return;
             }
 
@@ -283,102 +410,80 @@
                     return;
                 }
 
-                var buffer = readInfo.data;
+                // process the data available on the socket
+                self._onData(readInfo.data);
 
-                // data is available
-                if ((self._useTLS || self._useSTARTTLS) && !chrome.socket.secure) {
-                    // feed the data to the tls client
-                    if (self._tlsWorker) {
-                        self._tlsWorker.postMessage(createMessage(EVENT_INBOUND, buffer), [buffer]);
-                    } else {
-                        self._tls.processInbound(buffer);
-                    }
-                } else {
-                    // emit data event
-                    self._emit('data', buffer);
-                }
-
-                read.bind(self)(); // start the next read
+                // queue the next read
+                self._readLegacySocket();
             });
         };
 
-        //
-        // API
-        //
+        /**
+         * Invoked when data has been read from the socket. Handles cases when to feed
+         * the data available on the socket to forge.
+         * 
+         * @param {ArrayBuffer} buffer The binary data read from the socket
+         */
+        TCPSocket.prototype._onData = function(buffer) {
+            var self = this;
 
+            if ((self._useTLS || self._useSTARTTLS) && self._useForgeTls) {
+                // feed the data to the tls client
+                if (self._tlsWorker) {
+                    self._tlsWorker.postMessage(createMessage(EVENT_INBOUND, buffer), [buffer]);
+                } else {
+                    self._tls.processInbound(buffer);
+                }
+            } else {
+                // emit data event
+                self._emit('data', buffer);
+            }
+        };
+
+        /**
+         * Closes the socket
+         * @return {[type]} [description]
+         */
         TCPSocket.prototype.close = function() {
             this.readyState = 'closing';
+
             if (this._socketId !== 0) {
-                chrome.socket.disconnect(this._socketId);
-                chrome.socket.destroy(this._socketId);
+                if (this._useLegacySocket) {
+                    // close legacy socket
+                    chrome.socket.disconnect(this._socketId);
+                    chrome.socket.destroy(this._socketId);
+                } else {
+                    // close socket
+                    chrome.sockets.tcp.disconnect(this._socketId);
+                }
+
                 this._socketId = 0;
             }
 
+            // terminate the tls worker
             if (this._tlsWorker) {
                 this._tlsWorker.terminate();
+                this._tlsWorker = undefined;
             }
 
             this._emit('close');
         };
 
-        TCPSocket.prototype.upgradeToSecure = function() {
-            var self = this;
-
-            if (self.ssl || self._useSTARTTLS) {
-                return;
-            }
-
-            self._useSTARTTLS = true;
-
-            if (chrome.socket.secure) {
-                chrome.socket.secure(self._socketId, {}, function(tlsResult) {
-                    if (tlsResult !== 0) {
-                        self._emit('error', new Error('TLS handshake failed'));
-                        self.close();
-                        return;
-                    }
-
-                    self.ssl = true;
-
-                    // empty the buffer
-                    while (self._startTlsBuffer.length) {
-                        self.send(self._startTlsBuffer.shift());
-                    }
-
-                    // let's start reading
-                    read.bind(self)();
-                });
-            } else {
-                // setup the forge tls client or webworker
-                createTls.bind(self)();
-
-                if (self._tlsWorker) {
-                    // signal the handshake to the worker
-                    self._tlsWorker.postMessage(createMessage(EVENT_HANDSHAKE));
-                } else {
-                    // no worker, just use the regular tls client
-                    self._tls.handshake();
-                }
-
-            }
-        };
-
         TCPSocket.prototype.send = function(buffer) {
-            if ((this._useTLS || this._useSTARTTLS) && !chrome.socket.secure) {
+            if (!this._useForgeTls && this._useSTARTTLS && !this.ssl) {
+                // buffer the unprepared data until chrome.socket(s.tcp) handshake is done
+                this._startTlsBuffer.push(buffer);
+            } else if (this._useForgeTls && (this._useTLS || this._useSTARTTLS)) {
                 // give buffer to forge to be prepared for tls
                 if (this._tlsWorker) {
                     this._tlsWorker.postMessage(createMessage(EVENT_OUTBOUND, buffer), [buffer]);
                 } else {
                     this._tls.prepareOutbound(buffer);
                 }
-                return;
-            } else if (this._useSTARTTLS && !this.ssl) {
-                // buffer data until handshake is done
-                this._startTlsBuffer.push(buffer);
-                return;
+            } else {
+                // send the arraybuffer
+                this._send(buffer);
             }
-
-            this._send(buffer); // send the arraybuffer
         };
 
         TCPSocket.prototype._send = function(data) {
@@ -389,18 +494,32 @@
                 return;
             }
 
-            chrome.socket.write(self._socketId, data, function(writeInfo) {
-                if (writeInfo.bytesWritten < 0 && self._socketId !== 0) {
-                    // if the socket is already 0, it has already been closed. no need to alert then...
-                    self._emit('error', new Error('Could not write ' + data.byteLength + ' bytes to socket ' + self._socketId + '. Chrome error code: ' + writeInfo.bytesWritten));
-                    self._socketId = 0;
-                    self.close();
+            if (self._useLegacySocket) {
+                chrome.socket.write(self._socketId, data, function(writeInfo) {
+                    if (writeInfo.bytesWritten < 0 && self._socketId !== 0) {
+                        // if the socket is already 0, it has already been closed. no need to alert then...
+                        self._emit('error', new Error('Could not write ' + data.byteLength + ' bytes to socket ' + self._socketId + '. Chrome error code: ' + writeInfo.bytesWritten));
+                        self._socketId = 0;
+                        self.close();
 
-                    return;
-                }
+                        return;
+                    }
 
-                self._emit('drain');
-            });
+                    self._emit('drain');
+                });
+            } else {
+                chrome.sockets.tcp.send(self._socketId, data, function(sendInfo) {
+                    if (sendInfo.bytesSent < 0 && self._socketId !== 0) {
+                        // if the socket is already 0, it has already been closed. no need to alert then...
+                        self._emit('error', new Error('Could not write ' + data.byteLength + ' bytes to socket ' + self._socketId + '. Chrome error code: ' + sendInfo.bytesSent));
+                        self.close();
+
+                        return;
+                    }
+
+                    self._emit('drain');
+                });
+            }
         };
     } // end of chromeShim
 
@@ -444,13 +563,6 @@
                 );
             }
 
-            // setup the forge tls client
-            if (self._useTLS) {
-                // setup the forge tls client or webworker
-                createTls.bind(self)();
-
-            }
-
             setTimeout(function() {
                 _socket.emit('open', {
                     host: self.host,
@@ -460,13 +572,7 @@
 
                     if (self._useTLS) {
                         // the socket is up, do the tls handshake
-                        if (self._tlsWorker) {
-                            // signal the handshake to the worker
-                            self._tlsWorker.postMessage(createMessage(EVENT_HANDSHAKE));
-                        } else {
-                            // no worker, just use the regular tls client
-                            self._tls.handshake();
-                        }
+                        createTls.bind(self)();
                     } else {
                         // socket is up and running
                         self._emit('open');
@@ -496,7 +602,6 @@
                 });
             }, 0);
         };
-
 
         //
         // API
@@ -540,16 +645,9 @@
             }
 
             this._useSTARTTLS = true;
+
             // setup the forge tls client or webworker
             createTls.bind(this)();
-
-            if (this._tlsWorker) {
-                // signal the handshake to the worker
-                this._tlsWorker.postMessage(createMessage(EVENT_HANDSHAKE));
-            } else {
-                // no worker, just use the regular tls client
-                this._tls.handshake();
-            }
         };
 
         TCPSocket.getHostname = function(callback) {
@@ -636,17 +734,11 @@
         }
     };
 
-    // utility function, to be bound to the respective websocket & chrome.socket shim TCPSocket object
+    // utility function, to be bound to the TCPSocket object
     // creates an instance of the tls shim (no worker)
     var createTlsNoWorker = function() {
         // create the tls client
         this._tls = new TLS();
-
-        // configure the tls client
-        this._tls.configure({
-            host: this.host,
-            ca: this._ca
-        });
 
         // attach the handlers
         this._tls.tlserror = this.tlserror.bind(this);
@@ -655,9 +747,18 @@
         this._tls.tlsopen = this.tlsopen.bind(this);
         this._tls.tlsoutbound = this.tlsoutbound.bind(this);
         this._tls.tlsinbound = this.tlsinbound.bind(this);
+
+        // configure the tls client
+        this._tls.configure({
+            host: this.host,
+            ca: this._ca
+        });
+
+        // start the handshake
+        self._tls.handshake();
     };
 
-    // utility function, to be bound to the respective websocket & chrome.socket shim TCPSocket object
+    // utility function, to be bound to the TCPSocket object
     // creates an instance of the tls shim running in a web worker
     var createTlsWorker = function() {
         var self = this,
@@ -701,10 +802,14 @@
             self.tlserror(error.message);
         };
 
+        // start the worker and configure the tls client
         self._tlsWorker.postMessage(createMessage(EVENT_CONFIG, {
             host: self.host,
             ca: self._ca
-        })); // start the worker
+        }));
+
+        // start the handshake
+        self._tlsWorker.postMessage(createMessage(EVENT_HANDSHAKE));
     };
 
     function createMessage(event, message) {
