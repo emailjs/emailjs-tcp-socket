@@ -21,9 +21,9 @@
 (function() {
     'use strict';
 
-    // 
+    //
     // Events
-    // 
+    //
     var EVENT_INBOUND = 'inbound',
         EVENT_OUTBOUND = 'outbound',
         EVENT_OPEN = 'open',
@@ -35,7 +35,7 @@
 
     // import forge
     importScripts('forge.min.js');
-    
+
     // require the TLS handler
     var TLS = require('./tcp-socket-tls');
 
@@ -84,11 +84,11 @@
     }
 
     function tlsoutbound(buffer) {
-        self.postMessage(createMessage(EVENT_OUTBOUND, buffer));
+        self.postMessage(createMessage(EVENT_OUTBOUND, buffer), [buffer]);
     }
 
     function tlsinbound(buffer) {
-        self.postMessage(createMessage(EVENT_INBOUND, buffer));
+        self.postMessage(createMessage(EVENT_INBOUND, buffer), [buffer]);
     }
 
     // Helper function
