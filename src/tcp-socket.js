@@ -313,6 +313,11 @@
                 chrome.socket.destroy(this._socketId);
                 this._socketId = 0;
             }
+
+            if (this._tlsWorker) {
+                this._tlsWorker.terminate();
+            }
+
             this._emit('close');
         };
 
@@ -499,6 +504,11 @@
 
         TCPSocket.prototype.close = function() {
             this.readyState = 'closing';
+
+            if (this._tlsWorker) {
+                this._tlsWorker.terminate();
+            }
+
             _socket.emit('end-' + this._socketId);
         };
 
@@ -543,7 +553,7 @@
         };
 
         TCPSocket.getHostname = function(callback) {
-            if(_hostname){
+            if (_hostname) {
                 return callback(null, _hostname);
             }
             _socket.emit('hostname', function(hostname) {
