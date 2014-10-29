@@ -5,8 +5,6 @@ This shim brings [Mozilla-flavored](https://developer.mozilla.org/en-US/docs/Web
 
 [![Build Status](https://travis-ci.org/whiteout-io/tcp-socket.svg?branch=dev/umd)](https://travis-ci.org/whiteout-io/tcp-socket)
 
-Feel free to include in your [Chrome App](http://developer.chrome.com/extensions/apps)!
-
 # Usage
 
 Include `tcp-socket.js` and `forge` in your markup. It will attach itself to the navigator object.
@@ -30,7 +28,17 @@ It is not that easy to figure out if you want to assume a browser or node enviro
 
 If you remember the node.js require as a global in node-webkit, we can safely call the native node.js TCP API.
 
-**A note on TLS**: [Native TLS is not yet available for chrome.socket.](https://code.google.com/p/chromium/issues/detail?id=132896). For this reason, we cannot tap into the browser's native SSL certificates. If you want to use TLS, you must provide a certificate for pinning! This shim depends on [forge](https://github.com/digitalbazaar/forge) for TLS. Please consult the [forge project page](https://github.com/digitalbazaar/forge) for examples how to make forge available in your application and/or have a look at the example in this repository.
+**A note on TLS**: Native TLS support is flaky throughout the platforms. If you want to use TLS on a platform that does not natively provide it, we fall back to [forge](https://github.com/digitalbazaar/forge) for TLS, and you must provide a certificate for pinning! Please consult the [forge project page](https://github.com/digitalbazaar/forge) for examples how to make forge available in your application and/or have a look at the example in this repository.
+
+The following platforms support TLS natively:
+
+* node.js
+* Desktop Chrome Apps on Chrome M38+ (chrome.socket only! chrome.sockets.tcp.secure is broken)
+
+The following implementations use forge as a TLS shim:
+
+* WebSockets
+* Mobile Chrome Apps built with [cca](https://github.com/MobileChromeApps/mobile-chrome-apps) (chrome.sockets.tcp.secure is broken)
 
 **Use of web workers**: If you are on a platform where we fall back to forge for TLS, we can spin up a Web Worker to handle the TLS-related computation. To do this, you need to **browserify** `tcp-socket-tls-worker.js`. Please keep in mind that `forge.min.js` and the browserified version of `tcp-socket-tls-worker.js` **must** in the same folder! If you use a different path relative to your html file, you can provide it this file when you fire up the socket. **If tlsWorkerPath is undefined, no Web Worker will be started and the TLS-relatid computation will happen on the main thread!**
 
@@ -40,7 +48,7 @@ If you remember the node.js require as a global in node-webkit, we can safely ca
         tlsWorkerPath: 'relative/path/to/tcp-socket-tls-worker.js'
     });
 
-You can either supply the socket with a certificate, or use a trust-on-first-use based approach, where the socket is accepted in the first try and you will receive a callback with the certificate. Use this certificate in subsequent interactions with this host. Host authenticity is evaluated based on their Common Name (or SubjectAltNames) and the certificate's public key fingerprint.
+On a platform where we fall back to forge for TLS, you can either supply the socket with a certificate, or use a trust-on-first-use based approach, where the socket is accepted in the first try and you will receive a callback with the certificate. Use this certificate in subsequent interactions with this host. Host authenticity is evaluated based on their Common Name (or SubjectAltNames) and the certificate's public key fingerprint.
 
     var tls = navigator.TCPSocket.open('127.0.0.1', 9000, {
         useSecureTransport: true
@@ -91,6 +99,13 @@ Parallel to that, run
 and open [http://localhost:12345/test/integration/ws/integration.html](http://localhost:12345/test/integration/ws/integration.html) in your browser.
 
 WebSocket integration tests can be run via `grunt ws-integration-test`. They are disabled by default because these do not run correctly under PhantomJS.
+
+To run the integration tests in Chrome:
+
+1) Install `test/integration/chrome/certificate.crt` to your Chrome certificate storage (On Mac OS, that's the keychain)
+2) Add `test/integration/chrome` as a packaged app
+3) Run `node test/integration/chrome/server.js`
+4) Start the Chrome App.
 
 # Unavailable API
 
