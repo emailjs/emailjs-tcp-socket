@@ -755,7 +755,7 @@
         });
 
         // start the handshake
-        self._tls.handshake();
+        this._tls.handshake();
     };
 
     // utility function, to be bound to the TCPSocket object
