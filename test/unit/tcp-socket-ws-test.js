@@ -12,8 +12,9 @@ define(function(require) {
         var Io = function() {};
         Io.prototype.on = function() {};
         Io.prototype.emit = function() {};
+        Io.prototype.disconnect = function() {};
 
-        beforeEach(function() {
+        beforeEach(function(done) {
             // create chrome.socket stub
 
             stubIo = sinon.createStubInstance(Io);
@@ -22,8 +23,7 @@ define(function(require) {
                 return stubIo;
             };
 
-            stubIo.emit.withArgs('open').yields(42);
-            stubIo.emit.withArgs('hostname').yields('hostname.io');
+            stubIo.emit.withArgs('open').yieldsAsync('hostname.io');
 
             socket = TcpSocket.open('127.0.0.1', 9000, {
                 useSecureTransport: false,
@@ -31,27 +31,20 @@ define(function(require) {
             });
             expect(socket).to.exist;
             expect(socket._ca).to.exist;
-        });
 
-        afterEach(function() {
-            stubIo.destroyed = true;
+            stubIo.on.withArgs('data').callsArgWithAsync(1, new Uint8Array([0, 1, 2]).buffer);
+            socket.onopen = function(event) {
+                expect(event.data.proxyHostname).to.equal('hostname.io');
+                done();
+            };
         });
 
         describe('open and read', function() {
-            it('work without ssl', function(done) {
-                var testData = new Uint8Array([0, 1, 2]);
-
+            it('should work without ssl', function(done) {
                 socket.ondata = function(e) {
-                    var buf = new Uint8Array(e.data);
-                    expect(buf).to.deep.equal(testData);
+                    expect(new Uint8Array(e.data)).to.deep.equal(new Uint8Array([0, 1, 2]));
                     done();
                 };
-
-                socket.onopen = function() {
-                    expect(socket._socketId).to.equal(42);
-                };
-
-                stubIo.on.withArgs('data-42').callsArgWithAsync(1, testData);
             });
         });
 
@@ -59,39 +52,24 @@ define(function(require) {
             it('should work', function(done) {
                 socket.onclose = function() {
                     expect(socket.readyState).to.equal('closed');
+                    expect(stubIo.disconnect.callCount).to.equal(1);
+                    expect(stubIo.emit.withArgs('end').callCount).to.equal(1);
                     done();
                 };
 
-                stubIo.on.withArgs('close-42').callsArgWithAsync(1);
-
-                socket.onopen = function() {
-                    socket.close();
-                    expect(stubIo.emit.withArgs('end-42').callCount).to.equal(1);
-                };
+                socket.close();
             });
         });
 
         describe('send', function() {
             it('should not explode', function(done) {
-                socket.onopen = function() {
-                    stubIo.emit.withArgs('data-42').callsArgWithAsync(2);
+                stubIo.emit.withArgs('data').callsArgWithAsync(2);
 
-                    socket.ondrain = function() {
-                        done();
-                    };
-
-                    socket.send(new Uint8Array([0, 1, 2]).buffer);
-                };
-            });
-        });
-
-        describe('getHostname', function() {
-            it('should return hostname', function(done) {
-                TcpSocket.getHostname(function(err, hostname) {
-                    expect(err).to.not.exist;
-                    expect(hostname).to.equal('hostname.io');
+                socket.ondrain = function() {
                     done();
-                });
+                };
+
+                socket.send(new Uint8Array([0, 1, 2]).buffer);
             });
         });
     });

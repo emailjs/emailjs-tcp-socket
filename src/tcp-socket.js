@@ -37,7 +37,7 @@
         // global browser import
         navigator.TCPSocket = factory(navigator, root.TLS);
     }
-}(this, function(root, TLS, net, tls) {
+})(this, function(root, TLS, net, tls) {
     'use strict';
 
     // Constants used for tls-worker
@@ -79,7 +79,6 @@
     }
 
     function nodeShim() {
-
         TCPSocket = function(config) {
             var self = this,
                 netApi;
@@ -180,10 +179,6 @@
     } // end of nodeShim
 
     function chromeShim() {
-
-        /**
-         * TCPSocket constructor. Invoked indirectly via TCPSocket.open
-         */
         TCPSocket = function(config) {
             var self = this;
 
@@ -421,7 +416,7 @@
         /**
          * Invoked when data has been read from the socket. Handles cases when to feed
          * the data available on the socket to forge.
-         * 
+         *
          * @param {ArrayBuffer} buffer The binary data read from the socket
          */
         TCPSocket.prototype._onData = function(buffer) {
@@ -524,13 +519,6 @@
     } // end of chromeShim
 
     function wsShim() {
-
-        var _socket;
-        var _hostname;
-
-        /**
-         * TCPSocket constructor. Invoked indirectly via TCPSocket.open
-         */
         TCPSocket = function(config) {
             var self = this;
 
@@ -544,7 +532,6 @@
             self.bufferedAmount = 0;
             self.readyState = 'connecting';
             self.binaryType = config.options.binaryType;
-            self._socketId = false;
 
             if (self.binaryType !== 'arraybuffer') {
                 throw new Error('Only arraybuffers are supported!');
@@ -556,51 +543,51 @@
             self._useSTARTTLS = false;
             self._tlsWorkerPath = config.options.tlsWorkerPath;
 
-            if (!_socket || _socket.destroyed) {
-                _socket = io(
-                    (config.options.ws && config.options.ws.url) || window.location.origin,
-                    config.options.ws && config.options.ws.options
-                );
-            }
 
-            setTimeout(function() {
-                _socket.emit('open', {
-                    host: self.host,
-                    port: self.port
-                }, function(socketId) {
-                    self._socketId = socketId;
+            self._wsHost = (config.options.ws && config.options.ws.url) || window.location.origin;
+            self._wsOptions = (config.options.ws && config.options.ws.options) || {};
+            self._wsOptions.reconnection = self._wsOptions.reconnection || false;
+            self._wsOptions.multiplex = self._wsOptions.multiplex || false;
 
-                    if (self._useTLS) {
-                        // the socket is up, do the tls handshake
-                        createTls.bind(self)();
-                    } else {
-                        // socket is up and running
-                        self._emit('open');
-                    }
+            self._socket = io(self._wsHost, self._wsOptions);
+            self._socket.emit('open', {
+                host: self.host,
+                port: self.port
+            }, function(proxyHostname) {
+                self._proxyHostname = proxyHostname;
+                if (self._useTLS) {
+                    // the socket is up, do the tls handshake
+                    createTls.bind(self)();
+                } else {
+                    // socket is up and running
+                    self._emit('open', {
+                        proxyHostname: self._proxyHostname
+                    });
+                }
 
-                    _socket.on('data-' + self._socketId, function(buffer) {
-                        if (self._useTLS || self._useSTARTTLS) {
-                            // feed the data to the tls socket
-                            if (self._tlsWorker) {
-                                self._tlsWorker.postMessage(createMessage(EVENT_INBOUND, buffer), [buffer]);
-                            } else {
-                                self._tls.processInbound(buffer);
-                            }
+                self._socket.on('data', function(buffer) {
+                    if (self._useTLS || self._useSTARTTLS) {
+                        // feed the data to the tls socket
+                        if (self._tlsWorker) {
+                            self._tlsWorker.postMessage(createMessage(EVENT_INBOUND, buffer), [buffer]);
                         } else {
-                            // emit data event
-                            self._emit('data', buffer);
+                            self._tls.processInbound(buffer);
                         }
-                    });
-
-                    _socket.on('error-' + self._socketId, function(message) {
-                        self._emit('error', new Error(message));
-                    });
-
-                    _socket.on('close-' + self._socketId, function() {
-                        self._emit('close');
-                    });
+                    } else {
+                        // emit data event
+                        self._emit('data', buffer);
+                    }
                 });
-            }, 0);
+
+                self._socket.on('error', function(message) {
+                    self._emit('error', new Error(message));
+                    self.close();
+                });
+
+                self._socket.on('close', function() {
+                    self.close();
+                });
+            });
         };
 
         //
@@ -610,11 +597,14 @@
         TCPSocket.prototype.close = function() {
             this.readyState = 'closing';
 
+            this._socket.emit('end');
+            this._socket.disconnect();
+
             if (this._tlsWorker) {
                 this._tlsWorker.terminate();
             }
 
-            _socket.emit('end-' + this._socketId);
+            this._emit('close');
         };
 
         TCPSocket.prototype.send = function(buffer) {
@@ -634,7 +624,7 @@
 
         TCPSocket.prototype._send = function(data) {
             var self = this;
-            _socket.emit('data-' + self._socketId, data, function() {
+            self._socket.emit('data', data, function() {
                 self._emit('drain');
             });
         };
@@ -649,17 +639,6 @@
             // setup the forge tls client or webworker
             createTls.bind(this)();
         };
-
-        TCPSocket.getHostname = function(callback) {
-            if (_hostname) {
-                return callback(null, _hostname);
-            }
-            _socket.emit('hostname', function(hostname) {
-                _hostname = hostname;
-                return callback(null, _hostname);
-            });
-        };
-
     } // end of wsShim
 
     //
@@ -682,7 +661,13 @@
     TCPSocket.prototype.tlsopen = function() {
         this.ssl = true;
         if (this._useTLS) {
-            this._emit('open');
+            if (this._proxyHostname) {
+                this._emit('open', {
+                    proxyHostname: this._proxyHostname
+                });
+            } else {
+                this._emit('open');
+            }
         }
     };
 
@@ -852,4 +837,4 @@
     }
 
     return TCPSocket;
-}));
+});
