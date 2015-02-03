@@ -1,7 +1,7 @@
 tcp-socket
 ==========
 
-This shim brings [Mozilla-flavored](https://developer.mozilla.org/en-US/docs/WebAPI/TCP_Socket) version of the [Raw Socket API](http://www.w3.org/TR/raw-sockets/) to node.js, Chromium apps, and websockets (via socket.io). Its purpose is to enable apps to use the same codebase in Firefox OS, Chrome OS, and on the server.
+This shim brings [Mozilla-flavored](https://developer.mozilla.org/en-US/docs/WebAPI/TCP_Socket) version of the [Raw Socket API](http://www.w3.org/TR/raw-sockets/) to node.js, Chromium apps, Windows/WP 8 apps, and websockets (via socket.io). Its purpose is to enable apps to use the same codebase in Firefox OS, Chrome OS, and on the server.
 
 [![Build Status](https://travis-ci.org/whiteout-io/tcp-socket.svg?branch=dev/umd)](https://travis-ci.org/whiteout-io/tcp-socket)
 
@@ -34,6 +34,7 @@ The following platforms support TLS natively:
 
 * node.js
 * Desktop Chrome Apps on Chrome M38+ (chrome.socket only! chrome.sockets.tcp.secure is broken)
+* Windows StreamSocket
 
 The following implementations use forge as a TLS shim:
 
