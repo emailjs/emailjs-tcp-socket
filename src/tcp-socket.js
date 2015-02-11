@@ -72,7 +72,8 @@
     } else if (typeof chrome !== 'undefined' && (chrome.socket || chrome.sockets)) {
         // chrome packaged app using chrome.socket
         chromeShim();
-    } else if (typeof Windows === 'object' && Windows) {
+    } else if (typeof Windows === 'object' && Windows && Windows.Networking &&
+        Windows.Networking.Sockets && Windows.Networking.Sockets.StreamSocket) {
         // Windows app using SocketStream
         winShim();
     } else if (typeof window === 'object' && typeof io === 'function') {
