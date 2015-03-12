@@ -114,7 +114,10 @@
             });
 
             self._socket.on('error', function(error) {
-                self._emit('error', error);
+                // Ignore ECONNRESET errors. For the app this is the same as normal close
+                if (error.code !== 'ECONNRESET') {
+                    self._emit('error', error);
+                }
                 self.close();
             });
 
@@ -212,9 +215,9 @@
 
             chrome.runtime.getPlatformInfo(function(platformInfo) {
 
-                // 
+                //
                 // FIX START
-                // 
+                //
 
                 if (platformInfo.os.indexOf("cordova") !== -1) {
                     // chrome.sockets.tcp.secure is not functional on cordova
