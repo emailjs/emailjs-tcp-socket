@@ -35,6 +35,7 @@
         "postMessage": true,
         "before": true,
         "self": true,
-        "io": true
+        "io": true,
+        "Windows": false
     }
 }

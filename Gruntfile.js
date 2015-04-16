@@ -38,6 +38,12 @@ module.exports = function(grunt) {
                     reporter: 'spec'
                 },
                 src: ['test/integration/ws/integration.html']
+            },
+            'win-unit': {
+                options: {
+                    reporter: 'spec'
+                },
+                src: ['test/unit/win-unit.html']
             }
         },
 

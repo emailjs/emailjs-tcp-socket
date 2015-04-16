@@ -50,7 +50,6 @@
         EVENT_CERT = 'cert',
         EVENT_HANDSHAKE = 'handshake';
 
-
     // the class to be implemented
     var TCPSocket = function() {
         throw new Error('Runtime does not offer TCPSockets!');
@@ -73,9 +72,213 @@
     } else if (typeof chrome !== 'undefined' && (chrome.socket || chrome.sockets)) {
         // chrome packaged app using chrome.socket
         chromeShim();
+    } else if (typeof Windows === 'object' && Windows && Windows.Networking &&
+        Windows.Networking.Sockets && Windows.Networking.Sockets.StreamSocket) {
+        // Windows app using SocketStream
+        winShim();
     } else if (typeof window === 'object' && typeof io === 'function') {
         // websocket proxy
         wsShim();
+    }
+
+    function winShim() {
+
+        TCPSocket = function(config) {
+            var self = this;
+
+            config.options.useSecureTransport = (typeof config.options.useSecureTransport !== 'undefined') ? config.options.useSecureTransport : false;
+            config.options.binaryType = config.options.binaryType || 'arraybuffer';
+
+            // public flags
+            self.host = new Windows.Networking.HostName(config.host); // NB! HostName constructor will throw on invalid input
+            self.port = config.port;
+            self.ssl = config.options.useSecureTransport;
+            self.bufferedAmount = 0;
+            self.readyState = 'connecting';
+            self.binaryType = config.options.binaryType;
+
+            if (self.binaryType !== 'arraybuffer') {
+                throw new Error('Only arraybuffers are supported!');
+            }
+
+            self._socket = new Windows.Networking.Sockets.StreamSocket();
+
+            self._socket.control.keepAlive = true;
+            self._socket.control.noDelay = true;
+
+            self._dataReader = null;
+            self._dataWriter = null;
+
+            // set to true if upgrading with STARTTLS
+            self._upgrading = false;
+
+            // cache all client.send calls to this array if currently upgrading
+            self._upgradeCache = [];
+
+            // initial socket type. default is 'plainSocket' (no encryption applied)
+            // 'tls12' supports the TLS 1.2, TLS 1.1 and TLS 1.0 protocols but no SSL
+            self._protectionLevel = Windows.Networking.Sockets.SocketProtectionLevel[self.ssl ? 'tls12' : 'plainSocket'];
+
+            // Initiate connection to destination
+            self._socket.
+            connectAsync(self.host, self.port, self._protectionLevel).
+            done(function() {
+                self._setStreamHandlers();
+                self._emit('open');
+            }, function(E) {
+                self._emit('error', E);
+            });
+        };
+
+        /**
+         * Initiate Reader and Writer interfaces for the socket
+         */
+        TCPSocket.prototype._setStreamHandlers = function() {
+            var self = this;
+
+            // setup reader
+            self._dataReader = new Windows.Storage.Streams.DataReader(self._socket.inputStream);
+            self._dataReader.inputStreamOptions = Windows.Storage.Streams.InputStreamOptions.partial;
+
+            // setup writer
+            self._dataWriter = new Windows.Storage.Streams.DataWriter(self._socket.outputStream);
+
+            // start byte reader loop
+            self._read();
+        };
+
+        /**
+         * Emit an error and close socket
+         *
+         * @param {Error} error Error object
+         */
+        TCPSocket.prototype._errorHandler = function(error) {
+            var self = this;
+
+            // we ignore errors after close has been called, since all aborted operations
+            // will emit their error handlers
+            // this will also apply to starttls as a read call is aborted before upgrading the socket
+            if (self._upgrading || (self.readyState !== 'closing' && self.readyState !== 'closed')) {
+                self._emit('error', error);
+                self.close();
+            }
+        };
+
+        /**
+         * Read available bytes from the socket. This method is recursive  once it ends, it restarts itself
+         */
+        TCPSocket.prototype._read = function() {
+            var self = this;
+
+            if (self._upgrading || (self.readyState !== 'open' && self.readyState !== 'connecting')) {
+                return; // do nothing if socket not open
+            }
+
+            // Read up to 4096 bytes from the socket. This is not a fixed number (the mode was set
+            // with inputStreamOptions.partial property), so it might return with a smaller
+            // amount of bytes.
+            self._dataReader.loadAsync(4096).done(function(availableByteCount) {
+
+                if (!availableByteCount) {
+                    // no bytes available for reading, restart the reading process
+                    return setImmediate(self._read.bind(self));
+                }
+
+                // we need an Uint8Array that gets filled with the bytes from the buffer
+                var data = new Uint8Array(availableByteCount);
+                self._dataReader.readBytes(data); // data argument gets filled with the bytes
+
+                self._emit('data', data.buffer);
+
+                // restart reading process
+                return setImmediate(self._read.bind(self));
+            }, function(E) {
+                self._errorHandler(E);
+            });
+        };
+
+        //
+        // API
+        //
+
+        TCPSocket.prototype.close = function() {
+            var self = this;
+            self.readyState = 'closing';
+
+            try {
+                self._socket.close();
+            } catch (E) {
+                self._emit('error', E);
+            }
+
+            setImmediate(self._emit.bind(self, 'close'));
+        };
+
+        TCPSocket.prototype.send = function(data) {
+            var self = this;
+
+            if (this.readyState !== 'open') {
+                return;
+            }
+
+            if (self._upgrading) {
+                self._upgradeCache.push(data);
+                return;
+            }
+
+            // Write bytes to buffer
+            this._dataWriter.writeBytes(data.buffer && data || new Uint8Array(data));
+
+            // Emit buffer contents
+            self._dataWriter.storeAsync().done(function() {
+                self._emit('drain');
+            }, function(E) {
+                self._errorHandler(E);
+            });
+        };
+
+        TCPSocket.prototype.upgradeToSecure = function() {
+            var self = this;
+
+            if (self.ssl || self._upgrading) {
+                // nothing to do here
+                return;
+            }
+
+            self._upgrading = true;
+            try {
+                // release current input stream. this is required to allow socket upgrade
+                // write stream is not released as all send calls are cached from this point onwards
+                // and not passed to socket until the socket is upgraded
+                this._dataReader.detachStream();
+            } catch (E) {}
+
+            // update protection level
+            self._protectionLevel = Windows.Networking.Sockets.SocketProtectionLevel.tls12;
+
+            self._socket.upgradeToSslAsync(self._protectionLevel, self.host).done(
+                function() {
+                    var data;
+
+                    self._upgrading = false;
+                    self.ssl = true; // secured connection from now on
+
+                    self._dataReader = new Windows.Storage.Streams.DataReader(self._socket.inputStream);
+                    self._dataReader.inputStreamOptions = Windows.Storage.Streams.InputStreamOptions.partial;
+                    self._read();
+
+                    // emit all cached requests
+                    while (self._upgradeCache.length) {
+                        data = self._upgradeCache.shift();
+                        self.send(data);
+                    }
+                },
+                function(E) {
+                    self._upgrading = false;
+                    self._errorHandler(E);
+                }
+            );
+        };
     }
 
     function nodeShim() {
@@ -178,8 +381,7 @@
         function toBuffer(ab) {
             return new Buffer(new Uint8Array(ab));
         }
-
-    } // end of nodeShim
+    }
 
     function chromeShim() {
         TCPSocket = function(config) {
@@ -519,7 +721,7 @@
                 });
             }
         };
-    } // end of chromeShim
+    }
 
     function wsShim() {
         TCPSocket = function(config) {
@@ -545,7 +747,6 @@
             self._useTLS = config.options.useSecureTransport;
             self._useSTARTTLS = false;
             self._tlsWorkerPath = config.options.tlsWorkerPath;
-
 
             self._wsHost = (config.options.ws && config.options.ws.url) || window.location.origin;
             self._wsOptions = (config.options.ws && config.options.ws.options) || {};
@@ -642,7 +843,7 @@
             // setup the forge tls client or webworker
             createTls.bind(this)();
         };
-    } // end of wsShim
+    }
 
     //
     // TLS shim event handlers, unused when native TLS
