@@ -27,7 +27,7 @@
     } else if (typeof define === 'function' && define.amd && typeof nodeRequire !== 'undefined') {
         // amd under node-webkit
         define([], factory.bind(null, navigator, null, nodeRequire('net'), nodeRequire('tls')));
-    } else if (typeof exports === 'object' && typeof navigator !== 'undefined') {
+    } else if (typeof exports === 'object' && typeof navigator !== 'undefined' && typeof process === 'undefined') {
         // common.js for browser apps with native socket support
         module.exports = factory(navigator, require('./tcp-socket-tls'));
     } else if (typeof exports === 'object') {
