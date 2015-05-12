@@ -52,7 +52,7 @@ module.exports = function(grunt) {
                 options: {
                     reporter: 'spec'
                 },
-                src: ['test/unit/tcp-socket-node-test.js', 'test/integration/tcp-socket-test.js']
+                src: ['test/unit/tcp-socket-node-test.js', 'test/integration/tcp-socket-test.js', 'test/unit/tcp-socket-tls-test.js']
             }
         },
 

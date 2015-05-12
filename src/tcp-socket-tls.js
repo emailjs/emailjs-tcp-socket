@@ -48,7 +48,7 @@
                     return false;
                 }
 
-                if (!verifyCertificate(certs[0], self._host)) {
+                if (!self.verifyCertificate(certs[0], self._host)) {
                     return false;
                 }
 
@@ -70,7 +70,7 @@
 
                 // detect if this is a certificate used for signing by testing if the common name different from the hostname.
                 // also, an intermediate cert has no SANs, at least none that match the hostname.
-                if (!verifyCertificate(self._ca, self._host)) {
+                if (!self.verifyCertificate(self._ca, self._host)) {
                     // verify certificate through a valid certificate chain
                     return self._ca.verify(certs[0]);
                 }
@@ -155,41 +155,65 @@
 
     /**
      * Verifies a host name by the Common Name or Subject Alternative Names
+     * Expose as a method of TlsClient for testing purposes
      *
      * @param {Object} cert A forge certificate object
      * @param {String} host The host name, e.g. imap.gmail.com
      * @return {Boolean} true, if host name matches certificate, otherwise false
      */
-    function verifyCertificate(cert, host) {
-        var cn, cnRegex, subjectAltName, sanRegex;
-
-        cn = cert.subject.getField('CN');
-        if (cn && cn.value) {
-            cnRegex = new RegExp(cn.value.replace(/\./g, '\\.').replace(/\*/g, '.*'), 'i');
-            if (cnRegex.test(host)) {
-                return true;
-            }
-        }
+    TlsClient.prototype.verifyCertificate = function(cert, host) {
+        var cn, subjectAltName, entries, self = this;
 
         subjectAltName = cert.getExtension({
             name: 'subjectAltName'
         });
 
-        if (!(subjectAltName && subjectAltName.altNames)) {
+        cn = cert.subject.getField('CN');
+
+        // If subjectAltName is present then it must be used and Common Name must be discarded
+        // http://tools.ietf.org/html/rfc2818#section-3.1
+        // So we check subjectAltName first and if it does not exist then revert back to Common Name
+        if (subjectAltName && subjectAltName.altNames && subjectAltName.altNames.length) {
+            entries = subjectAltName.altNames.map(function(entry) {
+                return entry.value;
+            });
+        } else if (cn && cn.value) {
+            entries = [cn.value];
+        } else {
             return false;
         }
 
-        for (var i = subjectAltName.altNames.length - 1; i >= 0; i--) {
-            if (subjectAltName.altNames[i] && subjectAltName.altNames[i].value) {
-                sanRegex = new RegExp(subjectAltName.altNames[i].value.replace(/\./g, '\\.').replace(/\*/g, '.*'), 'i');
-                if (sanRegex.test(host)) {
-                    return true;
-                }
-            }
+        // find matches for hostname and if any are found return true, otherwise returns false
+        return !!entries.filter(function(sanEntry) {
+            return self.compareServername(host, sanEntry);
+        }).length;
+    };
+
+    /**
+     * Compares servername with a subjectAltName entry. Returns true if these values match.
+     *
+     * Wildcard usage in certificate hostnames is very limited, the only valid usage
+     * form is "*.domain" and not "*sub.domain" or "sub.*.domain" so we only have to check
+     * if the entry starts with "*." when comparing against a wildcard hostname. If "*" is used
+     * in invalid places, then treat it as a string and not as a wildcard.
+     *
+     * @param {String} servername Hostname to check
+     * @param {String} sanEntry subjectAltName entry to check against
+     * @returns {Boolean} Returns true if hostname matches entry from SAN
+     */
+    TlsClient.prototype.compareServername = function(servername, sanEntry) {
+        // normalize input values
+        servername = (servername || '').toString().toLowerCase();
+        sanEntry = (sanEntry || '').toString().toLowerCase();
+
+        // if the entry name does not include a wildcard, then expect exact match
+        if (sanEntry.substr(0, 2) !== '*.') {
+            return sanEntry === servername;
         }
 
-        return false;
-    }
+        // otherwise ignore the first subdomain
+        return servername.split('.').slice(1).join('.') === sanEntry.substr(2);
+    };
 
     // array buffer -> singlebyte string
     function a2s(buf) {
