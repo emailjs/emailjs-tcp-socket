@@ -70,6 +70,26 @@ describe('TlsClient unit tests', function() {
         it('should validate certificate hostname from exact SAN', function() {
             expect(TlsClient.prototype.verifyCertificate(certAlt, 'wmail.io')).to.be.true;
         });
+
+        it('should not validate certificate hostname from CN', function() {
+            expect(TlsClient.prototype.verifyCertificate(certNoAltExact, 'wmail.com')).to.be.false;
+            expect(TlsClient.prototype.verifyCertificate(certNoAltExact, 'foo')).to.be.false;
+        });
+
+        it('should not validate certificate hostname from wildcard CN', function() {
+            expect(TlsClient.prototype.verifyCertificate(certNoAltWildcard, 'wmail.com')).to.be.false;
+            expect(TlsClient.prototype.verifyCertificate(certNoAltWildcard, 'foo')).to.be.false;
+        });
+
+        it('should not validate certificate hostname from wildcard SAN', function() {
+            expect(TlsClient.prototype.verifyCertificate(certAlt, 'wmail.com')).to.be.false;
+            expect(TlsClient.prototype.verifyCertificate(certAlt, 'foo')).to.be.false;
+        });
+
+        it('should not validate certificate hostname from exact SAN', function() {
+            expect(TlsClient.prototype.verifyCertificate(certAlt, 'wmail.com')).to.be.false;
+            expect(TlsClient.prototype.verifyCertificate(certAlt, 'foo')).to.be.false;
+        });
     });
 
     describe('#compareServername', function() {
