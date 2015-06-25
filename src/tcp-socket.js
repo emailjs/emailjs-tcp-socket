@@ -490,14 +490,16 @@
                     }
                 });
 
-                chrome.sockets.tcp.connect(self._socketId, self.host, self.port, function(result) {
-                    if (result < 0) {
-                        self.readyState = 'closed';
-                        self._emit('error', new Error('Unable to connect'));
-                        return;
-                    }
+                chrome.sockets.tcp.setPaused(self._socketId, true, function() {
+                    chrome.sockets.tcp.connect(self._socketId, self.host, self.port, function(result) {
+                        if (result < 0) {
+                            self.readyState = 'closed';
+                            self._emit('error', new Error('Unable to connect'));
+                            return;
+                        }
 
-                    self._onSocketConnected();
+                        self._onSocketConnected();
+                    });
                 });
             });
         };
@@ -510,25 +512,24 @@
         TCPSocket.prototype._onSocketConnected = function() {
             var self = this;
 
-            // do an immediate TLS handshake if self._useTLS === true
-            if (self._useTLS) {
-                self._upgradeToSecure(function() {
-                    if (!self._useForgeTls) {
-                        // chrome.socket is up and running by now, while forge needs to be
-                        // fed traffic and emits 'open' at a later point
-                        self._emit('open');
+            if (!self._useTLS) {
+                return read();
+            }
 
-                        // the tls handshake is done let's start reading from the legacy socket
-                        if (self._useLegacySocket) {
-                            self._readLegacySocket();
-                        }
-                    }
-                });
-            } else {
-                // socket is up and running
-                self._emit('open');
+            // do an immediate TLS handshake if self._useTLS === true
+            self._upgradeToSecure(function() {
+                read();
+            });
+
+            function read() {
                 if (self._useLegacySocket) {
-                    self._readLegacySocket(); // let's start reading
+                    // the tls handshake is done let's start reading from the legacy socket
+                    self._readLegacySocket();
+                    self._emit('open');
+                } else {
+                    chrome.sockets.tcp.setPaused(self._socketId, false, function() {
+                        self._emit('open');
+                    });
                 }
             }
         };
@@ -542,14 +543,17 @@
 
             callback = callback || function() {};
 
-            if (self._useForgeTls) {
-                // setup the forge tls client or webworker as tls fallback
-                createTls.bind(self)();
-                callback();
-            } else if (!self._useLegacySocket) {
+            if (!self._useLegacySocket && self.readyState !== 'open') {
+                // use chrome.sockets.tcp.secure for TLS, not for STARTTLS!
+                // use forge only for STARTTLS
+                self._useForgeTls = false;
                 chrome.sockets.tcp.secure(self._socketId, onUpgraded);
             } else if (self._useLegacySocket) {
                 chrome.socket.secure(self._socketId, onUpgraded);
+            } else if (self._useForgeTls) {
+                // setup the forge tls client or webworker as tls fallback
+                createTls.bind(self)();
+                callback();
             }
 
             // invoked after chrome.socket.secure or chrome.sockets.tcp.secure have been upgraded

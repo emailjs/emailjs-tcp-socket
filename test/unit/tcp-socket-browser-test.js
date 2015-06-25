@@ -131,15 +131,16 @@ define(function(require) {
         describe('chrome.sockets', function() {
             beforeEach(function() {
                 // create chrome.socket stub
-                var ChromeLegacySocket = function() {};
-                ChromeLegacySocket.prototype.create = function() {};
-                ChromeLegacySocket.prototype.connect = function() {};
-                ChromeLegacySocket.prototype.disconnect = function() {};
-                ChromeLegacySocket.prototype.send = function() {};
-                ChromeLegacySocket.prototype.secure = function() {};
+                var ChromeSocket = function() {};
+                ChromeSocket.prototype.create = function() {};
+                ChromeSocket.prototype.connect = function() {};
+                ChromeSocket.prototype.disconnect = function() {};
+                ChromeSocket.prototype.send = function() {};
+                ChromeSocket.prototype.secure = function() {};
+                ChromeSocket.prototype.setPaused = function() {};
 
                 window.chrome.socket = undefined;
-                socketStub = sinon.createStubInstance(ChromeLegacySocket);
+                socketStub = sinon.createStubInstance(ChromeSocket);
                 window.chrome.sockets = {
                     tcp: socketStub
                 };
@@ -159,7 +160,7 @@ define(function(require) {
                                 socketId: 42,
                                 data: testData.buffer
                             });
-                        }, 10);
+                        }, 50);
                     }
                 };
 
@@ -172,6 +173,8 @@ define(function(require) {
                 });
                 socketStub.connect.withArgs(42, '127.0.0.1', 9000).yieldsAsync(0);
                 socketStub.secure.withArgs(42).yieldsAsync(0);
+                socketStub.setPaused.withArgs(42, true).yieldsAsync();
+                socketStub.setPaused.withArgs(42, false).yieldsAsync();
                 socketStub.send.withArgs(42).yieldsAsync({
                     bytesWritten: 3
                 });
@@ -211,12 +214,13 @@ define(function(require) {
                     expect(socketStub.secure.called).to.be.false;
                     expect(socketStub.send.calledOnce).to.be.true;
                     expect(socketStub.disconnect.calledOnce).to.be.true;
+                    expect(socketStub.setPaused.calledTwice).to.be.true;
 
                     done();
                 };
             });
 
-            it.skip('should open, read, write, close with ssl', function(done) {
+            it('should open, read, write, close with ssl', function(done) {
                 var sent = false;
 
                 socket = TcpSocket.open('127.0.0.1', 9000, {
@@ -250,6 +254,7 @@ define(function(require) {
                     expect(socketStub.secure.calledOnce).to.be.true;
                     expect(socketStub.send.calledOnce).to.be.true;
                     expect(socketStub.disconnect.calledOnce).to.be.true;
+                    expect(socketStub.setPaused.calledTwice).to.be.true;
 
                     done();
                 };
