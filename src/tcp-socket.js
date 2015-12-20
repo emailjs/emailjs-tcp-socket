@@ -24,12 +24,14 @@
     if (typeof define === 'function' && define.amd && typeof nodeRequire === 'undefined') {
         // amd
         define(['tcp-socket-tls'], factory.bind(null, navigator));
-    } else if (typeof define === 'function' && define.amd && typeof nodeRequire !== 'undefined') {
-        // amd under node-webkit
-        define([], factory.bind(null, navigator, null, nodeRequire('net'), nodeRequire('tls')));
     } else if (typeof exports === 'object' && typeof navigator !== 'undefined') {
-        // common.js for browser apps with native socket support
-        module.exports = factory(navigator, require('./tcp-socket-tls'));
+        if (typeof process !== 'undefined') {
+            // common.js for electron
+            module.exports = factory(null, null, require('net'), require('tls'));
+        } else {
+            // common.js for browserify apps with native socket support
+            module.exports = factory(navigator, require('./tcp-socket-tls'));
+        }
     } else if (typeof exports === 'object') {
         // common.js for node.js
         module.exports = factory(null, null, require('net'), require('tls'));
