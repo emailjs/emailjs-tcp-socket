@@ -21,12 +21,9 @@ Include `tcp-socket.js` and `forge` in your markup. It will attach itself to the
         ca: 'insert PEM-formatted cert here' // certificate pinning
     });
 
-**A note on node-webkit**:
-It is not that easy to figure out if you want to assume a browser or node environment on hybrid platforms like node-webkit. This gets even harder if you use require.js, too. There is one simple workaround, though:
+**A note on node-webkit and electron**:
 
-    window.nodeRequire = window.require
-
-If you remember the node.js require as a global in node-webkit, we can safely call the native node.js TCP API.
+Hybrid native platforms like NW.js (née node-webkit) and electron will be identified via `typeof process !== 'undefined'`. AMD is not supported for these platforms.
 
 **A note on TLS**: Native TLS support is flaky throughout the platforms. If you want to use TLS on a platform that does not natively provide it, we fall back to [forge](https://github.com/digitalbazaar/forge) for TLS, and you must provide a certificate for pinning! Please consult the [forge project page](https://github.com/digitalbazaar/forge) for examples how to make forge available in your application and/or have a look at the example in this repository.
 
