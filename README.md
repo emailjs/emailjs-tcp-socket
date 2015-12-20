@@ -30,13 +30,13 @@ Hybrid native platforms like NW.js (née node-webkit) and electron will be ident
 The following platforms support TLS natively:
 
 * node.js
-* Desktop Chrome Apps on Chrome M38+ (chrome.socket only! chrome.sockets.tcp.secure is broken)
+* Desktop Chrome Apps on Chrome M38+ with TLS connection (native tls is broken for STARTTLS :( )
 * Windows StreamSocket
 
 The following implementations use forge as a TLS shim:
 
 * WebSockets
-* Mobile Chrome Apps built with [cca](https://github.com/MobileChromeApps/mobile-chrome-apps) (chrome.sockets.tcp.secure is broken)
+* Chrome Apps with STARTTLS and Mobile Chrome Apps built with [cca](https://github.com/MobileChromeApps/mobile-chrome-apps) (chrome.sockets.tcp.secure is broken)
 
 **Use of web workers**: If you are on a platform where we fall back to forge for TLS, we can spin up a Web Worker to handle the TLS-related computation. To do this, you need to **browserify** `tcp-socket-tls-worker.js`. Please keep in mind that `forge.min.js` and the browserified version of `tcp-socket-tls-worker.js` **must** in the same folder! If you use a different path relative to your html file, you can provide it this file when you fire up the socket. **If tlsWorkerPath is undefined, no Web Worker will be started and the TLS-relatid computation will happen on the main thread!**
 
@@ -65,7 +65,7 @@ Here's how the TLS socket will behave when presented with a server certificate:
 * If a certificate was pinned, but the server presents another certificate (according to the public key fingerprint), it calls .oncert() to inform you about changes, but rejects the connection
 * If a certificate was pinned and the server certificate's public key fingerprint matches the pinned certificate, the connection is accepted. .oncert will **not** be called in this case!
 
-**A note on STARTTLS**: `upgrateToSecure()` will return immediately. If the TLS negotiation fails, the socket will throw an error and close. The socket buffers writes that occur in the meantime and writes the data out altogether when the TLS handshake is done. If said behavior is a problem in your protocol, please open an issue and/or submit a PR. Also, STARTTLS is **experimental** in Chrome Apps on Chrome 38+, where chrome.socket.secure() is available.
+**A note on STARTTLS**: `upgrateToSecure()` will return immediately. If the TLS negotiation fails, the socket will throw an error and close. The socket buffers writes that occur in the meantime and writes the data out altogether when the TLS handshake is done. If said behavior is a problem in your protocol, please open an issue and/or submit a PR.
 
 For everything else, see the [Mozilla TCPSocket API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/TCPSocket).
 
