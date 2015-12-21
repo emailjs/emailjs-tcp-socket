@@ -21,13 +21,13 @@
 (function(root, factory) {
     'use strict';
 
-    if (typeof define === 'function' && define.amd && typeof nodeRequire === 'undefined') {
+    if (typeof define === 'function' && define.amd) {
         // amd
         define(['tcp-socket-tls'], factory.bind(null, navigator));
     } else if (typeof exports === 'object' && typeof navigator !== 'undefined') {
-        if (typeof process !== 'undefined') {
+        if (process.versions.electron) {
             // common.js for electron
-            module.exports = factory(null, null, require('net'), require('tls'));
+            module.exports = factory(navigator, null, require('net'), require('tls'));
         } else {
             // common.js for browserify apps with native socket support
             module.exports = factory(navigator, require('./tcp-socket-tls'));
