@@ -25,7 +25,7 @@
         // amd
         define(['tcp-socket-tls'], factory.bind(null, navigator));
     } else if (typeof exports === 'object' && typeof navigator !== 'undefined') {
-        if (process.versions.electron) {
+        if (process.versions.electron || process.versions.nw || process.versions['node-webkit']) {
             // common.js for electron
             module.exports = factory(navigator, null, require('net'), require('tls'));
         } else {
