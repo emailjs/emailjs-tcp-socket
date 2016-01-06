@@ -3,7 +3,7 @@ tcp-socket
 
 This shim brings [Mozilla-flavored](https://developer.mozilla.org/en-US/docs/WebAPI/TCP_Socket) version of the [Raw Socket API](http://www.w3.org/TR/raw-sockets/) to node.js, Chromium apps, Windows/WP 8 apps, and websockets (via socket.io). Its purpose is to enable apps to use the same codebase in Firefox OS, Chrome OS, and on the server.
 
-[![Build Status](https://travis-ci.org/whiteout-io/tcp-socket.svg?branch=dev/umd)](https://travis-ci.org/whiteout-io/tcp-socket)
+[![Build Status](https://travis-ci.org/emailjs/emailjs-tcp-socket.svg?branch=master)](https://travis-ci.org/emailjs/emailjs-tcp-socket)
 
 # Usage
 
@@ -115,12 +115,9 @@ The following API is not available with this shim:
 
 ## Installation
 
-### [npm](https://www.npmjs.org/):
-
-    npm install --save tcp-socket
-
-    or directly from github
-    npm install --save https://github.com/whiteout-io/tcp-socket/tarball/<TAG_NAME>
+```
+npm install --save emailjs-tcp-socket
+```
 
 # License
 

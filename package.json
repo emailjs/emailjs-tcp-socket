@@ -1,16 +1,16 @@
 {
-  "name": "tcp-socket",
-  "version": "0.5.8",
+  "name": "emailjs-tcp-socket",
+  "version": "1.0.0",
   "main": "src/tcp-socket",
   "description": "This shim brings the W3C Raw Socket API to node.js and Chromium. Its purpose is to enable apps to use the same api in Firefox OS, Chrome OS, and on the server.",
   "repository": {
     "type": "git",
-    "url": "git://github.com/whiteout-io/tcp-socket.git"
+    "url": "git://github.com/emailjs/emailjs-tcp-socket.git"
   },
   "author": "Felix Hammerl",
   "maintainers": [{
     "name": "Felix Hammerl",
-    "email": "felix@whiteout.io"
+    "email": "felix.hammerl@gmail.com"
   }],
   "license": "MIT",
   "scripts": {
@@ -18,9 +18,9 @@
     "test": "grunt"
   },
   "bugs": {
-    "url": "https://github.com/whiteout-io/tcp-socket/issues"
+    "url": "https://github.com/emailjs/emailjs-tcp-socket/issues"
   },
-  "homepage": "https://github.com/whiteout-io/tcp-socket",
+  "homepage": "https://github.com/emailjs/emailjs-tcp-socket",
   "dependencies": {
     "node-forge": "^0.6.11"
   },
@@ -39,7 +39,7 @@
     "requirejs": "~2.1.10",
     "sinon": "1.7.3",
     "socket.io": "^1.0.6",
-    "starttls": "https://github.com/whiteout-io/starttls/tarball/master",
+    "starttls": "https://github.com/felixhammerl/starttls/tarball/master",
     "underscore": "^1.6.0"
   }
 }
