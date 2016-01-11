@@ -1,7 +1,7 @@
 'use strict';
 
 var expect = require('chai').expect,
-    TcpSocket = require('../../src/tcp-socket'),
+    TcpSocket = require('../../src/emailjs-tcp-socket'),
     net = require('net'),
     tls = require('tls'),
     startTls = require('starttls').startTls;

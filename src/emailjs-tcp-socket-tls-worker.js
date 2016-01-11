@@ -37,7 +37,7 @@
     importScripts('forge.min.js');
 
     // require the TLS handler
-    var TLS = require('./tcp-socket-tls');
+    var TLS = require('./emailjs-tcp-socket-tls');
 
     var tls = new TLS();
     tls.tlserror = tlserror;

@@ -2,7 +2,7 @@
 
 define(function(require) {
     var expect = require('chai').expect,
-        TcpSocket = require('tcp-socket');
+        TcpSocket = require('emailjs-tcp-socket');
 
     describe('TcpSocket chrome shim integration tests', function() {
         var localhost = '127.0.0.1';
@@ -31,7 +31,7 @@ define(function(require) {
                 };
 
                 socket.onerror = function() {
-                    // don't do expect(e).to.not.exist because expections 
+                    // don't do expect(e).to.not.exist because expections
                     // thrown in a socket callback silently disappear
                     // instead of bubbling up to window
                     errored = true;
@@ -67,7 +67,7 @@ define(function(require) {
                     opened = true;
                 };
                 socket.onerror = function() {
-                    // don't do expect(e).to.not.exist because expections 
+                    // don't do expect(e).to.not.exist because expections
                     // thrown in a socket callback silently disappear
                     // instead of bubbling up to window
                     errored = true;

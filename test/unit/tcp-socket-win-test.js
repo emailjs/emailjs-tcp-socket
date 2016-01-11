@@ -3,7 +3,7 @@
 define(function(require) {
 
     var expect = require('chai').expect,
-        TcpSocket = require('tcp-socket');
+        TcpSocket = require('emailjs-tcp-socket');
 
     describe('TcpSocket websocket unit tests', function() {
         var socket;

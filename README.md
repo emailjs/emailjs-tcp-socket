@@ -7,10 +7,11 @@ This shim brings [Mozilla-flavored](https://developer.mozilla.org/en-US/docs/Web
 
 # Usage
 
-Include `tcp-socket.js` and `forge` in your markup. It will attach itself to the navigator object.
+Include the source files and `forge` in your markup. It will attach itself to the navigator object.
 
     <script src="forge.min.js"></script>
-    <script src="tcp-socket.js"></script>
+    <script src="emailjs-tcp-socket-tls.js"></script>
+    <script src="emailjs-tcp-socket.js"></script>
 
     // creates a TCP socket
     var tcp = navigator.TCPSocket.open('127.0.0.1', 8000);

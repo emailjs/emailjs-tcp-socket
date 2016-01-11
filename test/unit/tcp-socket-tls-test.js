@@ -1,7 +1,7 @@
 'use strict';
 
 var expect = require('chai').expect,
-    TlsClient = require('../../src/tcp-socket-tls').TLS;
+    TlsClient = require('../../src/emailjs-tcp-socket-tls')['emailjs-tcp-socket-tls'];
 
 describe('TlsClient unit tests', function() {
 

@@ -2,7 +2,7 @@
 
 var expect = require('chai').expect,
     sinon = require('sinon'),
-    TcpSocket = require('../../src/tcp-socket');
+    TcpSocket = require('../../src/emailjs-tcp-socket');
 
 describe('TcpSocket unit tests', function() {
     var socket, nodeSocketStub;

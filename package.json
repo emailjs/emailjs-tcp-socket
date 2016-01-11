@@ -1,17 +1,19 @@
 {
   "name": "emailjs-tcp-socket",
-  "version": "1.0.0",
-  "main": "src/tcp-socket",
+  "version": "1.0.1",
+  "main": "src/emailjs-tcp-socket",
   "description": "This shim brings the W3C Raw Socket API to node.js and Chromium. Its purpose is to enable apps to use the same api in Firefox OS, Chrome OS, and on the server.",
   "repository": {
     "type": "git",
     "url": "git://github.com/emailjs/emailjs-tcp-socket.git"
   },
   "author": "Felix Hammerl",
-  "maintainers": [{
-    "name": "Felix Hammerl",
-    "email": "felix.hammerl@gmail.com"
-  }],
+  "maintainers": [
+    {
+      "name": "Felix Hammerl",
+      "email": "felix.hammerl@gmail.com"
+    }
+  ],
   "license": "MIT",
   "scripts": {
     "pretest": "cd node_modules/node-forge/ && npm install && npm run minify && cd ../..",
@@ -26,6 +28,7 @@
   },
   "devDependencies": {
     "chai": "~1.7.2",
+    "config": "^1.19.0",
     "express": "^4.8.6",
     "grunt": "~0.4.1",
     "grunt-contrib-clean": "^0.6.0",
@@ -36,6 +39,8 @@
     "grunt-mocha-phantomjs": "~0.4.0",
     "grunt-mocha-test": "~0.6.2",
     "mocha": "~1.16.2",
+    "morgan": "^1.6.1",
+    "npmlog": "^2.0.0",
     "requirejs": "~2.1.10",
     "sinon": "1.7.3",
     "socket.io": "^1.0.6",

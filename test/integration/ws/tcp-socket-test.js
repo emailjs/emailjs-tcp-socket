@@ -5,7 +5,7 @@ define(function(require) {
     localStorage.removeItem('debug');
 
     var expect = require('chai').expect,
-        TcpSocket = require('tcp-socket');
+        TcpSocket = require('emailjs-tcp-socket');
 
     describe('TcpSocket websocket integration tests', function() {
         this.timeout(10000);

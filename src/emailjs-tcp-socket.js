@@ -23,21 +23,21 @@
 
     if (typeof define === 'function' && define.amd) {
         // amd
-        define(['tcp-socket-tls'], factory.bind(null, navigator));
+        define(['emailjs-tcp-socket-tls'], factory.bind(null, navigator));
     } else if (typeof exports === 'object' && typeof navigator !== 'undefined') {
         if (process.versions.electron || process.versions.nw || process.versions['node-webkit']) {
             // common.js for electron
             module.exports = factory(navigator, null, require('net'), require('tls'));
         } else {
             // common.js for browserify apps with native socket support
-            module.exports = factory(navigator, require('./tcp-socket-tls'));
+            module.exports = factory(navigator, require('./emailjs-tcp-socket-tls'));
         }
     } else if (typeof exports === 'object') {
         // common.js for node.js
         module.exports = factory(null, null, require('net'), require('tls'));
     } else {
         // global browser import
-        navigator.TCPSocket = factory(navigator, root.TLS);
+        navigator.TCPSocket = factory(navigator, root['emailjs-tcp-socket-tls']);
     }
 })(this, function(root, TLS, net, tls) {
     'use strict';

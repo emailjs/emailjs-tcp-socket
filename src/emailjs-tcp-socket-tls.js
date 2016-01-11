@@ -30,7 +30,7 @@
         module.exports = factory(forge);
     } else {
         // global browser import
-        root.TLS = factory(root.forge);
+        root['emailjs-tcp-socket-tls'] = factory(root.forge);
     }
 }(this, function(forge) {
     'use strict';
