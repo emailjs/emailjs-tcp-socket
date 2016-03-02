@@ -561,7 +561,7 @@
             // invoked after chrome.socket.secure or chrome.sockets.tcp.secure have been upgraded
             function onUpgraded(tlsResult) {
                 if (tlsResult !== 0) {
-                    self._emit('error', new Error('TLS handshake failed. Reason: ' + chrome.runtime.lastError));
+                    self._emit('error', new Error('TLS handshake failed. Reason: ' + chrome.runtime.lastError.message));
                     self.close();
                     return;
                 }
