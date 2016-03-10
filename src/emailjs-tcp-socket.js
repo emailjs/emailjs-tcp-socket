@@ -386,6 +386,49 @@
     }
 
     function chromeShim() {
+
+        // setZeroTimeout slightly adapted from
+        // https://github.com/shahyar/setZeroTimeout-js (CC BY 3.0).
+        // Provides a function similar to setImmediate() on Chrome.
+        var setZeroTimeout = (function (w) {
+            var timeouts = [],
+            msg_name = 'asc0tmot',
+
+            // Like setTimeout, but only takes a function argument.  There's
+            // no time argument (always zero) and no arguments (you have to
+            // use a closure).
+            _postTimeout = function (fn) {
+                timeouts.push(fn);
+                postMessage(msg_name, '*');
+            },
+
+            _handleMessage = function (event) {
+                if (event.source === w && event.data === msg_name) {
+                    if (event.stopPropagation) {
+                        event.stopPropagation();
+                    }
+                    if (timeouts.length) {
+                        try {
+                            timeouts.shift()();
+                        } catch (e) {
+                            // Throw in an asynchronous closure to prevent setZeroTimeout from hanging due to error
+                            setTimeout((function (e) {
+                                return function () {
+                                    throw e.stack || e;
+                                };
+                            }(e)), 0);
+                        }
+                    }
+                    if (timeouts.length) { // more left?
+                        postMessage(msg_name, '*');
+                    }
+                }
+            };
+
+            addEventListener('message', _handleMessage, true);
+            return _postTimeout;
+        }(window));
+
         TCPSocket = function(config) {
             var self = this;
 
@@ -561,7 +604,7 @@
             // invoked after chrome.socket.secure or chrome.sockets.tcp.secure have been upgraded
             function onUpgraded(tlsResult) {
                 if (tlsResult !== 0) {
-                    self._emit('error', new Error('TLS handshake failed. Reason: ' + chrome.runtime.lastError));
+                    self._emit('error', new Error('TLS handshake failed. Reason: ' + chrome.runtime.lastError.message));
                     self.close();
                     return;
                 }
@@ -619,8 +662,16 @@
                 // process the data available on the socket
                 self._onData(readInfo.data);
 
-                // queue the next read
-                self._readLegacySocket();
+                // Queue the next read.
+                // If a STARTTLS handshake might be upcoming, postpone this onto
+                // the task queue so the IMAP client has a chance to call upgradeToSecure;
+                // without this, we might eat the beginning of the handshake.
+                // If we are already secure, just call it (for performance).
+                if (self.ssl) {     // are we secure yet?
+                    self._readLegacySocket();
+                } else {
+                    setZeroTimeout(self._readLegacySocket.bind(self));
+                }
             });
         };
 
