@@ -29,8 +29,13 @@
             // common.js for electron
             module.exports = factory(navigator, null, require('net'), require('tls'));
         } else {
-            // common.js for browserify apps with native socket support
-            module.exports = factory(navigator, require('./emailjs-tcp-socket-tls'));
+            if (typeof forge !== 'undefined') {
+                // Apache Cordova based Chrome Apps for Mobile with global forge
+                module.exports = factory(navigator, require('./emailjs-tcp-socket-tls'));
+            } else {
+                // common.js for browserify apps with native socket support
+                module.exports = factory(navigator);
+            }
         }
     } else if (typeof exports === 'object') {
         // common.js for node.js
