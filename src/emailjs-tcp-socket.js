@@ -501,7 +501,7 @@
                 chrome.socket.connect(self._socketId, self.host, self.port, function(result) {
                     if (result !== 0) {
                         self.readyState = 'closed';
-                        self._emit('error', new Error('Unable to connect'));
+                        self._emit('error', chrome.runtime.lastError);
                         return;
                     }
 
@@ -539,7 +539,7 @@
                     chrome.sockets.tcp.connect(self._socketId, self.host, self.port, function(result) {
                         if (result < 0) {
                             self.readyState = 'closed';
-                            self._emit('error', new Error('Unable to connect'));
+                            self._emit('error', chrome.runtime.lastError);
                             return;
                         }
 
