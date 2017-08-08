@@ -1,6 +1,8 @@
 tcp-socket
 ==========
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/emailjs/emailjs-tcp-socket.svg)](https://greenkeeper.io/)
+
 This shim brings [Mozilla-flavored](https://developer.mozilla.org/en-US/docs/WebAPI/TCP_Socket) version of the [Raw Socket API](http://www.w3.org/TR/raw-sockets/) to node.js, Chromium apps, Windows/WP 8 apps, and websockets (via socket.io). Its purpose is to enable apps to use the same codebase in Firefox OS, Chrome OS, and on the server.
 
 [![Build Status](https://travis-ci.org/emailjs/emailjs-tcp-socket.svg?branch=master)](https://travis-ci.org/emailjs/emailjs-tcp-socket)
