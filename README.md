@@ -1,3 +1,12 @@
+# DEPRECATION WARNING: THIS REPOSITORY IS NO LONGER ACTIVELY MAINTAINED!
+
+Context is given here:
+https://github.com/emailjs/emailjs-imap-client/issues/158
+https://blog.chromium.org/2016/08/from-chrome-apps-to-web.html
+https://github.com/MobileChromeApps/mobile-chrome-apps/issues/269
+
+
+
 tcp-socket
 ==========
 
