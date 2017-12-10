@@ -9,11 +9,16 @@ json_value() {
 }
 
 # read version from package.json and trim leading/trailing whitespace
-version=`less package.json | json_value version 1 | sed -e 's/^ *//' -e 's/ *$//'`
-prefix="v"
+VERSION=`less package.json | json_value version 1 | sed -e 's/^ *//' -e 's/ *$//'`
+PREFIX="v"
+
+npm run build
+git reset
+git add dist
+git commit -m 'Updating dist files'
 # tag, push, publish
-echo -e "\n> tagging $prefix$version"
-git tag "$prefix$version"
+echo -e "\n> tagging $PREFIX$VERSION"
+git tag "$PREFIX$VERSION"
 echo -e "\n> pushing commits to origin"
 git push
 echo -e "\n> pushing tags to origin"
