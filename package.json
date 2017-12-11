@@ -1,7 +1,7 @@
 {
   "name": "emailjs-tcp-socket",
-  "version": "1.0.2",
-  "main": "src/emailjs-tcp-socket",
+  "version": "2.0.0",
+  "main": "dist/socket",
   "description": "This shim brings the W3C Raw Socket API to node.js and Chromium. Its purpose is to enable apps to use the same api in Firefox OS, Chrome OS, and on the server.",
   "repository": {
     "type": "git",
@@ -16,35 +16,67 @@
   ],
   "license": "MIT",
   "scripts": {
-    "pretest": "cd node_modules/node-forge/ && npm install && npm run minify && cd ../..",
-    "test": "grunt"
+    "build": "npm run build-worker && rm -rf dist && babel src --out-dir dist --ignore '**/*-unit.js' --source-maps inline",
+    "build-worker": "rm -f res/tls.worker.blob && npx webpack --config webpack.config.worker.js -p && mv res/tls.worker.js res/tls.worker.blob",
+    "release": "./scripts/release.sh",
+    "lint": "npx standard",
+    "test": "npm run lint && npm run unit && npm run integration",
+    "unit": "npx mocha './src/*-unit.js' --reporter spec --require babel-register --require babel-polyfill testutils.js",
+    "integration": "npm run integration-ws",
+    "integration-ws": "npm run build && npx webpack --config webpack.config.test.js -p && npx wdio wdio.conf.js"
   },
   "bugs": {
     "url": "https://github.com/emailjs/emailjs-tcp-socket/issues"
   },
   "homepage": "https://github.com/emailjs/emailjs-tcp-socket",
   "dependencies": {
-    "node-forge": "^0.7.1"
+    "node-forge": "^0.7.1",
+    "ramda": "^0.25.0"
   },
   "devDependencies": {
-    "chai": "~4.1.1",
-    "config": "^1.19.0",
-    "express": "^4.8.6",
-    "grunt": "~1.0.1",
-    "grunt-contrib-clean": "^1.1.0",
-    "grunt-contrib-connect": "~1.0.2",
-    "grunt-contrib-copy": "~1.0.0",
-    "grunt-contrib-jshint": "~1.1.0",
-    "grunt-express-server": "^0.5.3",
-    "grunt-mocha-phantomjs": "~4.0.0",
-    "grunt-mocha-test": "~0.13.2",
-    "mocha": "~3.5.0",
-    "morgan": "^1.6.1",
-    "npmlog": "^4.1.2",
-    "requirejs": "~2.3.4",
-    "sinon": "3.1.0",
-    "socket.io": "^2.0.3",
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-plugin-inline-import": "^2.0.6",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-register": "^6.26.0",
+    "chai": "^4.1.2",
+    "emailjs-tcp-proxy": "^1.0.2",
+    "hoodiecrow-imap": "^2.1.0",
+    "mocha": "^4.0.1",
+    "nodemon": "^1.12.5",
+    "pre-commit": "^1.2.2",
+    "sinon": "^4.1.3",
+    "standard": "^10.0.3",
     "starttls": "https://github.com/felixhammerl/starttls/tarball/master",
-    "underscore": "^1.6.0"
+    "wdio-chromedriver-service": "^0.1.1",
+    "wdio-mocha-framework": "^0.5.11",
+    "webdriverio": "^4.9.11",
+    "webpack": "^3.10.0"
+  },
+  "standard": {
+    "globals": [
+      "describe",
+      "it",
+      "before",
+      "beforeEach",
+      "afterEach",
+      "after",
+      "expect",
+      "sinon",
+      "self",
+      "Worker",
+      "URL",
+      "Blob",
+      "chrome",
+      "Windows",
+      "postMessage",
+      "io",
+      "browser"
+    ],
+    "ignore": [
+      "dist"
+    ]
   }
 }

@@ -1,0 +1,10 @@
+{
+  "presets": ["env"],
+  "plugins": [
+    ["babel-plugin-inline-import", {
+      "extensions": [
+        ".blob"
+      ]
+    }]
+  ]
+}

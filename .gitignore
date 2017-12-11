@@ -1,5 +1,11 @@
 node_modules/
 npm-debug.log
 .DS_Store
-lib
-runtime.json
+package-lock.json
+test/ws/index.comp.js
+
+# VIM Swap Files
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-v][a-z]
+[._]sw[a-p]
