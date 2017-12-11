@@ -2,6 +2,7 @@ node_modules/
 npm-debug.log
 .DS_Store
 package-lock.json
+test/ws/error-shots
 test/ws/index.comp.js
 
 # VIM Swap Files
