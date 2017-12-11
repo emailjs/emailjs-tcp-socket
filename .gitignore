@@ -4,6 +4,7 @@ npm-debug.log
 package-lock.json
 test/ws/error-shots
 test/ws/index.comp.js
+test/chrome/temp-data-dir
 
 # VIM Swap Files
 [._]*.s[a-v][a-z]
