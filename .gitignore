@@ -6,6 +6,8 @@ test/ws/error-shots
 test/ws/index.comp.js
 test/chrome/temp-data-dir
 test/chrome/chrome-integration.comp.js
+test/chrome/mocha.*
+test/chrome/chai.*
 
 # VIM Swap Files
 [._]*.s[a-v][a-z]
