@@ -5,6 +5,7 @@ package-lock.json
 test/ws/error-shots
 test/ws/index.comp.js
 test/chrome/temp-data-dir
+test/chrome/chrome-integration.comp.js
 
 # VIM Swap Files
 [._]*.s[a-v][a-z]
