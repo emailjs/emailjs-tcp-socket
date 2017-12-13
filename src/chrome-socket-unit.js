@@ -2,16 +2,13 @@
 
 import TCPSocket from './chrome-socket'
 
-describe('TcpSocket chrome unit tests', function () {
+describe('TcpSocket Chrome Socket unit tests', function () {
   let socket
   let socketStub
   let testData = new Uint8Array([0, 1, 2])
 
   before(() => {
     global.chrome = {}
-  })
-  after(() => {
-    delete global.chrome
   })
 
   describe('chrome.socket', function () {

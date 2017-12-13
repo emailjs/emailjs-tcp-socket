@@ -2,7 +2,7 @@
 
 import TCPSocket from './node-socket'
 
-describe('Node socket shim unit tests', function () {
+describe('TCPSocket Node.js socket unit tests', function () {
   var socket, nodeSocketStub
 
   beforeEach(function () {
