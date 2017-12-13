@@ -1,7 +1,7 @@
 /* eslint-ignore no-unused-expressions */
 
 import TCPSocket from '../../'
-import { PORT_NET, PORT_STARTTLS, PORT_TLS } from './constants'
+import { PORT_NET, PORT_STARTTLS, PORT_TLS } from '../constants'
 const { expect } = window.chai
 
 const a2s = arr => String.fromCharCode.apply(null, new Uint8Array(arr))

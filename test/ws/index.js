@@ -1,5 +1,5 @@
 import TCPSocket from '../../'
-import { PORT_NET, PORT_TLS } from './constants'
+import { PORT_NET, PORT_TLS } from '../constants'
 
 const a2s = arr => String.fromCharCode.apply(null, new Uint8Array(arr))
 const s2a = str => new Uint8Array(str.split('').map(char => char.charCodeAt(0))).buffer

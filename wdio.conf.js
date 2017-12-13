@@ -2,17 +2,9 @@ const attachProxy = require('emailjs-tcp-proxy').default
 const express = require('express')
 const { Server } = require('http')
 const path = require('path')
-const net = require('net')
-const tls = require('tls')
-const fs = require('fs')
-const { join } = require('path')
-const { PORT_NET, PORT_TLS } = require('./test/ws/constants')
+const echo = require('./test/echo')
 
-const key = fs.readFileSync(join(__dirname, 'crt', 'server.key'), 'utf8')
-const cert = fs.readFileSync(join(__dirname, 'crt', 'server.crt'), 'utf8')
-const ptEcho = net.createServer(socket => { socket.pipe(socket) })
-const tlsEcho = tls.createServer({ key, cert }, socket => { socket.pipe(socket) })
-
+const { startServers, stopServers } = echo()
 const app = express()
 const server = Server(app)
 app.use('/', express.static(path.join(__dirname, 'test', 'ws')))
@@ -45,8 +37,7 @@ exports.config = {
     ui: 'bdd'
   },
   beforeSession: function (config, capabilities, specs) {
-    ptEcho.listen(PORT_NET)
-    tlsEcho.listen(PORT_TLS)
+    startServers()
     server.listen(12345)
   },
   before: function (capabilities, specs) {
@@ -56,8 +47,7 @@ exports.config = {
   after: function (result, capabilities, specs) {
   },
   afterSession: function (config, capabilities, specs) {
-    ptEcho.close()
-    tlsEcho.close()
     server.close()
+    stopServers()
   }
 }
