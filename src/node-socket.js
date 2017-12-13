@@ -22,8 +22,9 @@ export default class TCPSocket {
       throw new Error('Only arraybuffers are supported!')
     }
 
-    const netApi = this.ssl ? tls : net
-    this._socket = netApi.connect(this.port, this.host, () => this._emit('open'))
+    this._socket = this.ssl
+      ? tls.connect(this.port, this.host, { }, () => this._emit('open'))
+      : net.connect(this.port, this.host, () => this._emit('open'))
 
     // add all event listeners to the new socket
     this._attachListeners()
