@@ -1,0 +1,26 @@
+{
+  "name": "tcp-socket with chrome.sockets",
+  "description": "Example of a TCPSocket shim for Chrome Packaged Apps",
+  "version": "0.0.1",
+  "manifest_version": 2,
+  "offline_enabled": false,
+  "permissions": [
+    {
+      "socket": [
+        "tcp-connect"
+      ]
+    }
+  ],
+  // "sockets": {
+  //     "tcp": {
+  //         "connect": ""
+  //     }
+  // },
+  "app": {
+    "background": {
+      "scripts": [
+        "background.js"
+      ]
+    }
+  }
+}
