@@ -1,5 +1,3 @@
-/* eslint-ignore no-unused-expressions */
-
 import TCPSocket from '../../'
 import { PORT_NET, PORT_STARTTLS, PORT_TLS } from '../constants'
 const { expect } = window.chai
