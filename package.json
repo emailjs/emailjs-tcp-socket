@@ -22,8 +22,8 @@
     "lint": "npx standard",
     "test": "npm run lint && npm run unit && npm run integration",
     "unit": "npx mocha './src/*-unit.js' --reporter spec --require babel-register --require babel-polyfill testutils.js",
-    "integration": "npm run integration-ws",
-    "integration-ws": "npm run build && npx webpack --config webpack.config.test.js -p && npx wdio wdio.conf.js",
+    "integration": "npm run build && npm run integration-ws && npm run integration-chrome",
+    "integration-ws": "npx webpack --config webpack.config.test.js -p && npx wdio wdio.conf.js",
     "integration-chrome": "cp node_modules/chai/chai.js node_modules/mocha/mocha.js node_modules/mocha/mocha.css test/chrome/ && npm run build && npx webpack --config webpack.config.chrome.js && npx babel-node test/chrome/run.js"
   },
   "bugs": {
