@@ -3,8 +3,16 @@ const express = require('express')
 const { Server } = require('http')
 const path = require('path')
 const net = require('net')
+const tls = require('tls')
+const fs = require('fs')
+const { join } = require('path')
+const { PORT_NET, PORT_TLS } = require('./test/ws/constants')
 
-const echo = net.createServer(socket => socket.pipe(socket))
+const key = fs.readFileSync(join(__dirname, 'crt', 'server.key'), 'utf8')
+const cert = fs.readFileSync(join(__dirname, 'crt', 'server.crt'), 'utf8')
+const ptEcho = net.createServer(socket => { socket.pipe(socket) })
+const tlsEcho = tls.createServer({ key, cert }, socket => { socket.pipe(socket) })
+
 const app = express()
 const server = Server(app)
 app.use('/', express.static(path.join(__dirname, 'test', 'ws')))
@@ -17,10 +25,7 @@ exports.config = {
   maxInstances: 1,
   capabilities: [{
     maxInstances: 1,
-    browserName: 'chrome',
-    chromeOptions: {
-      args: ['headless', 'disable-gpu']
-    }
+    browserName: 'chrome'
   }],
   sync: true,
   logLevel: 'error',
@@ -40,9 +45,9 @@ exports.config = {
     ui: 'bdd'
   },
   beforeSession: function (config, capabilities, specs) {
-    echo.listen(8888, () => {
-      server.listen(12345)
-    })
+    ptEcho.listen(PORT_NET)
+    tlsEcho.listen(PORT_TLS)
+    server.listen(12345)
   },
   before: function (capabilities, specs) {
     var chai = require('chai')
@@ -51,8 +56,8 @@ exports.config = {
   after: function (result, capabilities, specs) {
   },
   afterSession: function (config, capabilities, specs) {
-    echo.close(() => {
-      server.close()
-    })
+    ptEcho.close()
+    tlsEcho.close()
+    server.close()
   }
 }

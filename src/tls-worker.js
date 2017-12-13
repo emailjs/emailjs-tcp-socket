@@ -12,7 +12,7 @@ var tls = new TLS()
 tls.tlserror = message => self.postMessage(createMessage(EVENT_ERROR, message))
 tls.tlscert = cert => self.postMessage(createMessage(EVENT_CERT, cert))
 tls.tlsclose = () => self.postMessage(createMessage(EVENT_CLOSE))
-tls.tlsopen = self.postMessage(createMessage(EVENT_OPEN))
+tls.tlsopen = () => self.postMessage(createMessage(EVENT_OPEN))
 tls.tlsoutbound = buffer => self.postMessage(createMessage(EVENT_OUTBOUND, buffer), [buffer])
 tls.tlsinbound = buffer => self.postMessage(createMessage(EVENT_INBOUND, buffer), [buffer])
 
