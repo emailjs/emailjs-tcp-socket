@@ -1,6 +1,6 @@
 language: node_js
 dist: trusty
-sudo: false
+sudo: required
 node_js:
   - lts/*
 notifications:
@@ -14,3 +14,7 @@ before_script:
   - export CHROME_PATH="$(pwd)/chrome-linux/chrome"
   - sh -e /etc/init.d/xvfb start
   - sleep 3 # wait for xvfb to boot
+  - sudo cp crt/rootCA.pem /usr/local/share/ca-certificates/
+  - sudo cp crt/server.crt /usr/local/share/ca-certificates/
+  - sudo update-ca-certificates
+
