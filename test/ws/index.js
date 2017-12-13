@@ -44,15 +44,9 @@ window.onload = () => {
   const useSecureTransport = true
   const tls = TCPSocket.open('localhost', PORT_TLS, { useSecureTransport, ca })
   tls.onopen = () => {
-    console.log('### OPEN')
     tls.send(s2a('payload'))
   }
-  tls.onerror = (e) => {
-    console.log('### ERROR')
-    console.error(e)
-  }
   tls.ondata = ({ data }) => {
-    console.log('### DATA')
     const incomingData = a2s(data)
     const elem = document.createElement('textarea')
     elem.innerText = incomingData
