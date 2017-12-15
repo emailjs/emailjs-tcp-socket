@@ -10,6 +10,8 @@ notifications:
 addons:
   chrome: stable
 before_script:
+  - mkdir -p /tmp/bin && wget -P /tmp/bin https://chromedriver.storage.googleapis.com/2.34/chromedriver_linux64.zip && unzip /tmp/bin/chromedriver_linux64.zip
+  - export PATH=/tmp/bin:$PATH
   - export DISPLAY=:99.0
   - export CHROME_PATH="$(pwd)/chrome-linux/chrome"
   - sh -e /etc/init.d/xvfb start
