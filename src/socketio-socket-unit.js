@@ -2,7 +2,7 @@
 
 import TCPSocket from './socketio-socket'
 
-describe.only('TcpSocket websocket unit tests', function () {
+describe('TcpSocket websocket unit tests', function () {
   var stubIo, socket
 
   var Io = function () { }
