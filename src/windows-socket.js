@@ -1,19 +1,17 @@
+import { propOr } from 'ramda'
+
 export default class TCPSocket {
   static open (host, port, options = {}) {
     return new TCPSocket({ host, port, options })
   }
 
-  constructor (config) {
-    config.options.useSecureTransport = (typeof config.options.useSecureTransport !== 'undefined') ? config.options.useSecureTransport : false
-    config.options.binaryType = config.options.binaryType || 'arraybuffer'
-
-    // public flags
-    this.host = new Windows.Networking.HostName(config.host) // NB! HostName constructor will throw on invalid input
-    this.port = config.port
-    this.ssl = config.options.useSecureTransport
+  constructor ({ host, port, options }) {
+    this.host = new Windows.Networking.HostName(host) // NB! HostName constructor will throw on invalid input
+    this.port = port
+    this.ssl = propOr(false, 'useSecureTransport')(options)
     this.bufferedAmount = 0
     this.readyState = 'connecting'
-    this.binaryType = config.options.binaryType
+    this.binaryType = propOr('arraybuffer', 'binaryType')(options)
 
     if (this.binaryType !== 'arraybuffer') {
       throw new Error('Only arraybuffers are supported!')

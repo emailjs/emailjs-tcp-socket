@@ -1,3 +1,4 @@
+import { propOr } from 'ramda'
 import net from 'net'
 import tls from 'tls'
 
@@ -6,17 +7,13 @@ export default class TCPSocket {
     return new TCPSocket({ host, port, options })
   }
 
-  constructor (config) {
-    config.options.useSecureTransport = (typeof config.options.useSecureTransport !== 'undefined') ? config.options.useSecureTransport : false
-    config.options.binaryType = config.options.binaryType || 'arraybuffer'
-
-    // public flags
-    this.host = config.host
-    this.port = config.port
-    this.ssl = config.options.useSecureTransport
+  constructor ({ host, port, options }) {
+    this.host = host
+    this.port = port
+    this.ssl = propOr(false, 'useSecureTransport')(options)
     this.bufferedAmount = 0
     this.readyState = 'connecting'
-    this.binaryType = config.options.binaryType
+    this.binaryType = propOr('arraybuffer', 'binaryType')(options)
 
     if (this.binaryType !== 'arraybuffer') {
       throw new Error('Only arraybuffers are supported!')
