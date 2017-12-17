@@ -29,7 +29,7 @@ See also the [Mozilla TCPSocket API Documentation](https://developer.mozilla.org
 var tcpSocket = TCPSocket.open('127.0.0.1', 8000);
 var tlsSocket = TCPSocket.open('127.0.0.1', 9000, {
   useSecureTransport: true,
-  ca: 'insert PEM-formatted cert here' //
+  ca: 'PEM-formatted X.509 TLS Cert'
 });
 ```
 
@@ -40,7 +40,7 @@ A call to `TCPSocket.open` expects host and port, followed by further socket opt
 
 ## #upgradeToSecure()
 
-Established a secure channel via TLS. The upgradeToSecure method allows turning a TCP non secured connection into a secured one. `upgrateToSecure()` will return immediately. If the TLS negotiation fails, the socket will throw an error and close. The socket buffers writes that occur in the meantime and writes the data out altogether when the TLS handshake is done. If said behavior is a problem in your protocol, please open an issue and/or submit a PR.
+Established a secure channel via TLS. The upgradeToSecure method allows turning a TCP non secured connection into a secured one. `upgradeToSecure()` will return immediately. If the TLS negotiation fails, the socket will throw an error and close. The socket buffers writes that occur in the meantime and writes the data out altogether when the TLS handshake is done. If this behavior is a problem in your protocol, please open an issue and/or submit a PR.
 
 **A note on native TLS**: Native TLS support is varying throughout the platforms. If you want to use TLS on a platform that does not natively provide it, we fall back to [forge](https://github.com/digitalbazaar/forge) for TLS, and you must provide a certificate for pinning!
 
@@ -70,6 +70,8 @@ Here's how the TLS shim will behave when presented with a server certificate:
 * If a certificate was pinned, but the server presents another certificate (according to the public key fingerprint), it calls .oncert() to inform you about changes, but rejects the connection
 * If a certificate was pinned and the server certificate's public key fingerprint matches the pinned certificate, the connection is accepted. .oncert will **not** be called in this case!
 
+Please note that we can not synchronously ask whether that certificate is ok or not, since the TLS shim runs in a Web Worker.
+
 ## #close()
 
 ```javascript
@@ -84,7 +86,7 @@ Closes the connection, invokes `.onclose` when socket is closed.
 socket.send(data)
 ```
 
-Send an ArrayBuffer across the network. Backpressure is handled via buffering inside the socket.
+Send an ArrayBuffer across the network. Backpressure is handled in the actual underlying socket implementations.
 
 ## Events
 
