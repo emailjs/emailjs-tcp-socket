@@ -57,7 +57,7 @@
     "wdio-mocha-framework": "^0.5.11",
     "webdriverio": "^4.9.11",
     "webpack": "^3.10.0",
-    "ws": "^3.3.2"
+    "ws": "^4.0.0"
   },
   "standard": {
     "globals": [
