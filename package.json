@@ -52,7 +52,7 @@
     "pre-commit": "^1.2.2",
     "sinon": "^4.1.4",
     "standard": "^10.0.3",
-    "wdio-chromedriver-service": "^0.1.1",
+    "wdio-chromedriver-service": "^0.1.2",
     "wdio-mocha-framework": "^0.5.11",
     "webdriverio": "^4.10.0",
     "webpack": "^3.10.0",
