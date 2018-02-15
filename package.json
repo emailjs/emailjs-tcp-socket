@@ -23,7 +23,7 @@
     "test": "npm run lint && npm run unit && npm run integration",
     "unit": "npx mocha './src/*-unit.js' --reporter spec --require babel-register --require babel-polyfill testutils.js",
     "integration": "npm run integration-ws && npm run integration-node",
-    "integration-node": "NODE_TLS_REJECT_UNAUTHORIZED=0 npx mocha './test/node/node-integration.js' --reporter spec --require babel-register --require babel-polyfill testutils.js",
+    "integration-node": "NODE_TLS_REJECT_UNAUTHORIZED=0 npx mocha './test/node/node-integration.js' --require testutils.js",
     "integration-ws": "npm run build && npx webpack --config webpack.config.test.js -p && npx wdio wdio.conf.js",
     "integration-chrome": "npm run build && cp node_modules/chai/chai.js node_modules/mocha/mocha.js node_modules/mocha/mocha.css test/chrome/ && npx webpack --config webpack.config.chrome.js && npx babel-node test/chrome/run.js"
   },

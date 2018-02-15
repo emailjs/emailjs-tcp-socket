@@ -1,6 +1,6 @@
-import echo from '../echo'
-import TCPSocket from '../../'
-import { PORT_NET, PORT_STARTTLS, PORT_TLS } from '../constants'
+const echo = require('../echo')
+const TCPSocket = require('../../').default
+const { PORT_NET, PORT_STARTTLS, PORT_TLS } = require('../constants')
 
 const { startServers, stopServers } = echo()
 
