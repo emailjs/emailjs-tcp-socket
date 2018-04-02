@@ -1,6 +1,6 @@
 {
   "name": "emailjs-tcp-socket",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "main": "dist/socket",
   "description": "This shim brings the W3C Raw Socket API to node.js and Chromium. Its purpose is to enable apps to use the same api in Firefox OS, Chrome OS, and on the server.",
   "repository": {
