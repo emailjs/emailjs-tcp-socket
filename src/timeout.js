@@ -19,7 +19,7 @@ function handleMessage (event) {
       try {
         timeouts.shift()()
       } catch (e) {
-          // Throw in an asynchronous closure to prevent setZeroTimeout from hanging due to error
+        // Throw in an asynchronous closure to prevent setZeroTimeout from hanging due to error
         setTimeout((function (e) {
           return function () {
             throw e.stack || e

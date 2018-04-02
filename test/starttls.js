@@ -166,7 +166,7 @@ function createServer (cb) {
       cryptoSocket.removeAllListeners('data')
 
       const options = Object.assign({}, certsByHost['*'])
-      options.server = server  // TLSSocket needs server for SNI to work
+      options.server = server // TLSSocket needs server for SNI to work
 
       const cleartext = new tls.TLSSocket(cryptoSocket, options)
 
