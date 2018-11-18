@@ -33,7 +33,7 @@
   "homepage": "https://github.com/emailjs/emailjs-tcp-socket",
   "dependencies": {
     "node-forge": "^0.7.5",
-    "ramda": "^0.25.0"
+    "ramda": "^0.26.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
