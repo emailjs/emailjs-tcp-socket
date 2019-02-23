@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/emailjs/emailjs-tcp-socket",
   "dependencies": {
-    "node-forge": "^0.7.5",
+    "node-forge": "^0.8.1",
     "ramda": "^0.25.0"
   },
   "devDependencies": {
