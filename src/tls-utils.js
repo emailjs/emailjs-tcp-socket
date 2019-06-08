@@ -59,8 +59,8 @@ var createTlsNoWorker = function (socket) {
 
 var createTlsWithWorker = function (socket) {
   socket._tlsWorker = new Worker(URL.createObjectURL(new Blob([TlsWorkerBlob])))
-  socket._tlsWorker.onerror = ({message}) => socket.tlserror(message)
-  socket._tlsWorker.onmessage = function ({data: {event, message}}) {
+  socket._tlsWorker.onerror = ({ message }) => socket.tlserror(message)
+  socket._tlsWorker.onmessage = function ({ data: { event, message } }) {
     switch (event) {
       case EVENT_CERT:
         socket.tlscert(message)
