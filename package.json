@@ -45,7 +45,7 @@
     "babel-register": "^6.26.0",
     "chai": "^4.2.0",
     "chrome-launcher": "^0.10.7",
-    "chromedriver": "^74.0.0",
+    "chromedriver": "^75.0.0",
     "emailjs-tcp-proxy": "^1.0.2",
     "hoodiecrow-imap": "^2.1.0",
     "mocha": "^6.1.4",
