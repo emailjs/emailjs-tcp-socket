@@ -55,7 +55,7 @@
     "wdio-chromedriver-service": "^5.0.1",
     "wdio-mocha-framework": "^0.6.4",
     "webdriverio": "^5.10.0",
-    "webpack": "^4.33.0",
+    "webpack": "^4.34.0",
     "webpack-cli": "^3.3.3",
     "ws": "^7.0.0"
   },
