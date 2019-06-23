@@ -10,6 +10,7 @@ export default class TCPSocket {
   constructor ({ host, port, options }) {
     this.host = host
     this.port = port
+    this.ca = propOr(undefined, 'ca')(options)
     this.ssl = propOr(false, 'useSecureTransport')(options)
     this.bufferedAmount = 0
     this.readyState = 'connecting'
@@ -20,7 +21,7 @@ export default class TCPSocket {
     }
 
     this._socket = this.ssl
-      ? tls.connect(this.port, this.host, { }, () => this._emit('open'))
+      ? tls.connect(this.port, this.host, { ca: this.ca }, () => this._emit('open'))
       : net.connect(this.port, this.host, () => this._emit('open'))
 
     // add all event listeners to the new socket
@@ -87,7 +88,7 @@ export default class TCPSocket {
     if (this.ssl) return
 
     this._removeListeners()
-    this._socket = tls.connect({ socket: this._socket }, () => { this.ssl = true })
+    this._socket = tls.connect({ socket: this._socket, ca: this.ca }, () => { this.ssl = true })
     this._attachListeners()
   }
 }
