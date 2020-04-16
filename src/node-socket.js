@@ -19,12 +19,18 @@ export default class TCPSocket {
       throw new Error('Only arraybuffers are supported!')
     }
 
+    var connectOptions = {
+      port: this.port,
+      host: this.host,
+      servername: this.host // SNI
+    }
+
+    if (global.checkImapServerIdentity) {
+      connectOptions.checkServerIdentity = global.checkImapServerIdentity
+    }
+
     this._socket = this.ssl
-      ? tls.connect({
-        port: this.port,
-        host: this.host,
-        servername: this.host // SNI
-      }, () => this._emit('open'))
+      ? tls.connect(connectOptions, () => this._emit('open'))
       : net.connect(this.port, this.host, () => this._emit('open'))
 
     // add all event listeners to the new socket
